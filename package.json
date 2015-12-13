@@ -1,0 +1,13 @@
+{
+  "name": "cord",
+  "description": "A bridge bot for IRC to Discord and stuff",
+  "author": "copygirl <halfnerd.copygirl@gmail.com>",
+  "main": "cord.ls",
+  "version": "0.0.0",
+  "dependencies": {
+    "discord.js": "^3.9.1",
+    "irc": "^0.4.0",
+    "node-irc": "0.0.3",
+    "prelude-ls": "^1.1.2"
+  }
+}

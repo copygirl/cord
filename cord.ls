@@ -15,7 +15,10 @@ discord = new DiscordClient!
 for plugin in plugins
   (require plugin) irc, discord
 
-irc.connect!
+irc.connect (err) !-> if err
+  console.log err
+  process.exit!
+
 discord.login ...auth.discord<[email password]>
 
 # Quit nicely when pressing CTRL-C

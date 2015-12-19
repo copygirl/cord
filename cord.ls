@@ -4,28 +4,14 @@ require! {
   "./auth"
 }
 
+# Plugins to load from the local folder
 plugins =
   "./log"
   "./relay"
   "./commands"
 
-if auth.irc?
-  irc = new IrcServer auth.irc
-  irc.connect (err) !-> if err?
-    console.error err
-    process.exit!
-else console.log "[= IRC =] No channel selected!"
-
-discord = new DiscordClient!
-
-# Loading modules, irc parameter is optional, may be undefined
-for plugin in plugins
-  (require plugin) discord, irc
-
-discord.login ...auth.discord<[email password]>
-
-# Quit nicely when pressing CTRL-C
-process.on \SIGINT, !->
+# Finalize
+finalize = !->
   Promise.all do
     irc?.disconnect!
     discord.logout!
@@ -34,3 +20,26 @@ process.on \SIGINT, !->
     # error or actually supposed to be like this.
     !-> process.exit!
     !-> process.exit!
+
+# Connecting to IRC
+if auth.irc?
+  irc = new IrcServer auth.irc
+  console.log "[= IRC =] Connecting to #{auth.irc.server}"
+  irc.connect (err) !-> if err?
+    console.error "[= IRC =] #err"
+    finalize!
+else console.log "[= IRC =] No channel selected!"
+
+discord = new DiscordClient!
+
+# Loading modules, irc parameter is optional, may be undefined
+for plugin in plugins
+  (require plugin) discord, irc
+
+# Connect to discord
+discord.login ...auth.discord<[email password]>, (err) !-> if err?
+  console.error "[Discord] #err"
+  finalize!
+
+# Quit nicely when pressing CTRL-C
+process.on \SIGINT, !-> finalize!

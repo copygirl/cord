@@ -9,7 +9,7 @@ plugins =
   "./log"
   "./relay"
   "./commands"
-  "./voice"
+#  "./voice"
 
 # Finalize
 finalize = !->
@@ -39,9 +39,10 @@ for plugin in plugins
 
 # Connect to discord
 console.log "[Discord] Connecting"
-discord.login ...auth.discord<[email password]>, (err) !-> if err?
-  console.error "[Discord] #err"
-  finalize!
+discord.login ...auth.discord<[email password]> 
+  .catch (err) !->
+    console.error "[Discord] #err"
+    finalize!
 
 # Quit nicely when pressing CTRL-C
-process.on \SIGINT, !-> finalize!
+process.on \SIGINT, finalize

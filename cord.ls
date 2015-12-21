@@ -9,6 +9,7 @@ plugins =
   "./log"
   "./relay"
   "./commands"
+  "./voice"
 
 # Finalize
 finalize = !->
@@ -37,6 +38,7 @@ for plugin in plugins
   (require plugin) discord, irc
 
 # Connect to discord
+console.log "[Discord] Connecting"
 discord.login ...auth.discord<[email password]>, (err) !-> if err?
   console.error "[Discord] #err"
   finalize!

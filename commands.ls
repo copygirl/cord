@@ -32,7 +32,7 @@ context =
       "Please, say my name again." "Talk to me more."
       "I'm here for you." "Don't stop." "Continue."
       "Please ask copygirl to add more responses."
-
+  
   * /^cord[:,] .+\?$/g
     * "Yes!" "Yes." "Yeah." "Heck yeah!" "Sure."
       "For sure!" "Totally." "Positive." "True."
@@ -45,7 +45,7 @@ context =
       "Are you out of your mind?" "What the fueh?"
       "I have no opinion." "No idea." "I won't tell."
       "Insufficient data." "Computation error."
-
+  
   * /\b([1-9]\d{0,1})d([2-9]|[1-9]\d{1,2})\b/g, (data, matches) ->
       if matches.length > 4 then return
       total-dice = 0
@@ -77,11 +77,11 @@ respond = ({ irc, discord, message }: data, response, args) !->
     return respond data, response[Math.floor Math.random! * response.length], args
   if typeof! response == \Function
     return respond data, response data, args
-
+  
   if message instanceof common.Message
     user = "#{message.user}"
     message.channel.send "\x02#user\x0F: #response"
-
+    
     # Without set-immediate, somehow sends
     # response before sending relayed message
     set-immediate util.discord-send-channel,

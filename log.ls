@@ -5,7 +5,7 @@ module.exports = (discord, irc) !->
     "[= IRC =] We hacked into their mainframes, sir!"
   discord.on \ready, !-> console.log do
     "[Discord] Ready to serve, copy-sensei."
-
+  
   irc?.on \message, (message) !->
     if message.notice then return
     console.log "[= IRC =]",
@@ -15,7 +15,7 @@ module.exports = (discord, irc) !->
         else if message.notice then "-#{message.from}-"
         else "<#{message.from}>"
       "#message"
-
+  
   discord.on \message, (message) !->
     channel = message.channel.name
     user = message.author.username

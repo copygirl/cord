@@ -9,7 +9,6 @@ plugins =
   "./log"
   "./relay"
   "./commands"
-#  "./voice"
 
 # Finalize
 finalize = !->

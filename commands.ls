@@ -105,8 +105,8 @@ on-message = (data, text) !->
     args = while (a = regex.exec text)? then a[0 to a.length]
     return respond data, cmd, args if args.length > 0
 
-module.exports = (irc, discord) !->
-  irc.on \message, (message) !->
+module.exports = (discord, irc) !->
+  irc?.on \message, (message) !->
     if message.channel? and !message.notice and
        !message.own and message.user.name !of ignored
       on-message { irc, discord, message }, message.text

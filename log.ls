@@ -1,12 +1,12 @@
 require! "./util"
 
-module.exports = (irc, discord) !->
-  irc.self.on \connect, !-> console.log do
+module.exports = (discord, irc) !->
+  irc?.self.on \connect, !-> console.log do
     "[= IRC =] We hacked into their mainframes, sir!"
   discord.on \ready, !-> console.log do
     "[Discord] Ready to serve, copy-sensei."
-
-  irc.on \message, (message) !->
+  
+  irc?.on \message, (message) !->
     if message.notice then return
     console.log "[= IRC =]",
       if message.channel? then "[#{message.to}]"

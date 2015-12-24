@@ -15,7 +15,9 @@ ping-protect = (nick) ->
   splice nick, 1, 0, "\u200B"
 
 
-module.exports = (irc, discord) !->
+module.exports = (discord, irc) !->
+  return if not irc?
+
   irc.on \message, (message) !->
     if !message.channel? or message.notice or message.own then return
     text = limit message.text, message-limit

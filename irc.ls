@@ -20,6 +20,7 @@ default-options =
   auto-connect: false
   flood-protection: true
   strip-colors: true
+  retry-count: 5
 
 
 default-part-reasons =
@@ -174,7 +175,7 @@ export class Server extends common.Server
   connect: (callback) ->
     (resolve, reject) <~! promise callback
     if @_irc?
-      return reject new Error "Already connected / connecting to #@server"
+      return reject new Error "Already connected / connecting to #{@server}"
     
     @_irc := new irc.Client null, null, @_opt
     
@@ -255,6 +256,9 @@ export class Server extends common.Server
         case \v => @users[arg]?.modes[ch] -= "+"
         case \o => @users[arg]?.modes[ch] -= "@"
     
+    @_irc.on \abort (times) !~>
+      reject new Error "Failed to connect to #{@server}, giving up after #times tries"
+    
     @_irc.once \registered, !~>
       @self.online = true
       resolve!
@@ -269,7 +273,7 @@ export class Server extends common.Server
       reason = null
     (resolve, reject) <~! promise callback
     if !@_irc?
-      return reject new Error "Not connected to #@server"
+      return reject new Error "Not connected to #{@server}"
     reason ?= random default-quit-reasons
     @_irc.disconnect reason, (err) !~>
       if err then return reject err
@@ -280,7 +284,7 @@ export class Server extends common.Server
   join: (channel, callback) ->
     (resolve, reject) <~! promise callback
     if !@connected
-      return reject new Error "Not connected to #@server"
+      return reject new Error "Not connected to #{@server}"
     if @channels[channel]
       return reject new Error "Already joined #channel"
     irc.join channel, (err) !~>
@@ -293,7 +297,7 @@ export class Server extends common.Server
       reason = null
     (resolve, reject) <~! promise callback
     if !@connected
-      return reject new Error "Not connected to #@server"
+      return reject new Error "Not connected to #{@server}"
     if typeof! channel == \String
       ch = channel
       channel = @channels[channel]
@@ -379,4 +383,3 @@ export UserMode =
   normal: ""
   voice: "+"
   operator: "@"
-  

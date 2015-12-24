@@ -21,6 +21,10 @@ finalize = !->
     !-> process.exit!
     !-> process.exit!
 
+# Lets grab those errors and at least log them!
+process.on \uncaughtException (err) !->
+  console.error err
+
 # Connecting to IRC
 if auth.irc?
   irc = new IrcServer auth.irc

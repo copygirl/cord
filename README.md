@@ -1,8 +1,14 @@
 # cord
 
-**cord** is chat bot framework, currently supporting IRC and Discord as well as
-the name of our personal bot residing thhe *#obsidian* community IRC channel
-and Discord server. One of cord's strengths is its modularity:
+**cord** is chat bot framework, currently supporting IRC and Discord, as well
+as the name of our personal bot residing the *#obsidian Research* IRC channel
+and Discord server. This is undoubtedly the best bot written JavaScript. If you
+openly disagree, you'll hurt its feelings. cord identifies as an agender
+robot-kin and prefers the pronoun "it".
+
+## Features
+
+One of cord's strengths is its modularity:
 
 - **Sockets** provide a common interface for dealing with different services.
 - **Plugs** is just our obviously *brilliant* way of saying "plugins".
@@ -17,9 +23,17 @@ other plug can simply reply to incoming messages, and the reply will also be
 relayed to the other bridged channels.
 
 Something else noteworthy to point out is cord's message structure: Other than
-containing vital information such as time, sender and target, messages are just
-made of **parts**. A part is either a plain string or an object that can be
-`toString`ed to something 
+containing vital information such as time, sender and target, messages are made
+of **parts**. A part is either a plain string or an object that can be
+`toString`ed to something reasonable, such a User instance returning the user's
+name. Alternatively, a socket's message sending implementation can turn the
+object into something better looking or appropriate for that socket:
+Formatting, mentions, actions, newlines, ...
+
+### Plugins
+
+- **Logging**: Currently only logs messages to the console.
+- **Bridge**: Relays messages between linked channels.
 
 ## Installation
 
@@ -41,3 +55,9 @@ Instead, information on *all the things* can be found on the [wiki](https://gith
 ```
 npm start
 ```
+
+## License
+
+![](https://github.com/copygirl/cord/raw/master/LICENSE.gif)  
+_**cord** doesn't have  
+a care in the world._

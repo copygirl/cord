@@ -226,9 +226,9 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
     let isAction = false;
     let content = join(map(parts, (part) =>
         // Get dem newlines in here!
-        (part == Socket.NewLine) ? "\n" :
+        (part === Socket.NewLine) ? "\n" :
         // If there's an Action identifier, format the message afterwards.
-        (part == Socket.Action) ? (isAction = true, "") :
+        (part === Socket.Action) ? (isAction = true, "") :
         // If a discord user/channel is being mentioned, transform it to a proper mention.
         ((part instanceof Socket.Mention) && part.mentionable._discordMention) ? part._discordMention :
         // Otherwise just toString the part.

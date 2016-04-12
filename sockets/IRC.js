@@ -235,7 +235,9 @@ IRCSocket.Channel = class IRCChannel extends Socket.Channel {
   _send(parts, fireEvent) {
     let message = new Socket.Message(this.socket, new Date(), this, this.socket.self, parts);
     let isAction = false;
-    let content = join(map(parts, part => ((part == Socket.Action) ? (isAction = true, "") : part)), "");
+    let content = join(map(parts, (part) =>
+        ((part === Socket.Action) ? (isAction = true, "") : part)
+      ), "");
     let func = (isAction ? "action" : "say");
     this.socket._irc[func](this.name, content);
     if (fireEvent) this.socket.emit("message", message);

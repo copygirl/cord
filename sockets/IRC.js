@@ -93,11 +93,6 @@ let IRCSocket = module.exports = class IRCSocket extends Socket {
     this._irc.on("abort", (retries) => {
       this.emit("disconnected", `Aborted after ${ retries } retries`); });
     
-    this._irc.conn.on("close", (err) => {
-      if (this.isConnected) this.emit("disconnected", `Socket closed`); });
-    this._irc.conn.on("error", (err) => {
-      if (this.isConnected) this.emit("disconnected", `Socket error: ${ err }`); });
-    
     this.on("disconnected", () => {
       this._users.clear();
       this._channels.clear();
@@ -186,7 +181,14 @@ let IRCSocket = module.exports = class IRCSocket extends Socket {
       
       this.once("connected", onConnect);
       this.once("disconnected", onDisconnect);
+      
       this._irc.connect();
+      
+      // _irc.conn is only set after .connect() is called.
+      this._irc.conn.on("close", (err) => {
+        if (this.isConnected) this.emit("disconnected", `Socket closed`); });
+      this._irc.conn.on("error", (err) => {
+        if (this.isConnected) this.emit("disconnected", `Socket error: ${ err }`); });
     });
   }
   

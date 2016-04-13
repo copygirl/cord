@@ -21,8 +21,7 @@ let defaults = {
 let otherOptions = {
   autoConnect: false,
   floodProtection: true,
-  stripColors: true,
-  retryCount: 5
+  stripColors: true
 };
 
 // TODO: Add other valid channel identifiers.
@@ -89,6 +88,11 @@ let IRCSocket = module.exports = class IRCSocket extends Socket {
     
     this._irc.on("abort", (retries) => {
       this.emit("disconnected", `Aborted after ${ retries } retries`); });
+    
+    this._irc.conn.on("close", (err) => {
+      if (this.isConnected) this.emit("disconnected", `Socket closed`); });
+    this._irc.conn.on("error", (err) => {
+      if (this.isConnected) this.emit("disconnected", `Socket error: ${ err }`); });
     
     this.on("disconnected", () => {
       this._users.clear();

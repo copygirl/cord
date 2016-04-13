@@ -39,8 +39,10 @@ let Socket = module.exports = implement(class Socket {
   /** Disconnects the socket, returning a promise. */
   disconnect(reason) { throw new Error("Not implemented"); }
   
+  /** Prints an information message to the console. */
+  log(...args) { console.log(`[INFO|${ this.id }]`, ...args) }
   /** Prints a warning message to the console. */
-  warn(message) { console.log(`[WARN|${ this.id }] ${ message }`) }
+  warn(...args) { console.log(`[WARN|${ this.id }]`, ...args) }
   
   /** Returns a string depending on the expected type of the resolve string.
    *  That is, "user", "channel" or null for an invalid resolve string. */

@@ -7,18 +7,18 @@ let { extend, map, join } = require("../utility");
 
 
 let defaults = {
-  server: null,     // [REQUIRED] IP of the server, for example "irc.esper.net"
-  port: 6667,       //  ( Port of the server, defaults to 6667 )
-  serverName: null, //  ( Fancy disply name for the server, like "Esper.NET" )
-  channels: [ ],    //  ( Default channels to join once connected )
+  server: null,     // [REQUIRED] Address of the server, for example "irc.esper.net".
+  port: 6667,       //   Port of the server, defaults to 6667.
+  serverName: null, //   Fancy disply name for the server, like "Esper.NET".
+  channels: [ ],    //   Default channels to join once connected.
   
-  nick: null,     // [REQUIRED] Preferred nick to use
-  password: null, //  ( Password used to identify with NickServ )
-  userName: null, //  ( User name, defaults to nick )
-  realName: null, //  ( Real name, defaults to nick )
+  nick: null,     // [REQUIRED] Preferred nick to use.
+  password: null, //   Password used to identify with NickServ.
+  userName: null, //   User name, defaults to nick.
+  realName: null  //   Real name, defaults to nick.
 };
 
-let otherOptions = {
+let ircOptions = {
   autoConnect: false,
   floodProtection: true,
   stripColors: true
@@ -32,8 +32,12 @@ let IRCSocket = module.exports = class IRCSocket extends Socket {
   
   constructor(id, auth) {
     super(id, auth);
+    if (auth.server == null) throw new Error(`${ id }: server required`);
+    if (auth.nick == null) throw new Error(`${ id }: nick required`);
+    if (auth.channels.length == 0) this.warn("No channels specified");
+    
     this.name = auth.serverName || auth.server;
-    auth = extend({ }, defaults, auth, otherOptions);
+    auth = extend({ }, defaults, auth, ircOptions);
     if (auth.userName == null) auth.userName = auth.nick;
     if (auth.realName == null) auth.realName = auth.nick;
     

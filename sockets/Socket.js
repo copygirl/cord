@@ -4,6 +4,7 @@ let { EventEmitter } = require("events");
 
 let { implement, map, prepend, join } = require("../utility");
 
+
 /** The Socket class defines a common interface for connections.
  *  Each socket represents a service / server such as IRC / Discord. */
 let Socket = module.exports = implement(class Socket {
@@ -38,6 +39,9 @@ let Socket = module.exports = implement(class Socket {
   /** Disconnects the socket, returning a promise. */
   disconnect(reason) { throw new Error("Not implemented"); }
   
+  /** Prints a warning message to the console. */
+  warn(message) { console.log(`[WARN|${ this.id }] ${ message }`) }
+  
   /** Returns a string depending on the expected type of the resolve string.
    *  That is, "user", "channel" or null for an invalid resolve string. */
   type(resolveStr) { throw new Error("Not implemented"); }
@@ -46,9 +50,7 @@ let Socket = module.exports = implement(class Socket {
    *  Returns [ type, matches ]:
    *  type    - "user", "channel" or null for an invalid resolve string.
    *  matches - An array of user or channel objects that matched the resolve string. */
-  resolve(resolveStr) {
-    return [ this.type(resolveStr), this._resolver.resolve(resolveStr) ];
-  }
+  resolve(resolveStr) { return [ this.type(resolveStr), this._resolver.resolve(resolveStr) ]; }
   
   // on("connected",    (self)   => ...)
   // on("disconnected", (reason) => ...)

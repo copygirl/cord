@@ -6,10 +6,22 @@ let Socket     = require("./Socket");
 let { map, filter, any, join } = require("../utility");
 
 
+let defaults = {
+  // To authenticate, either just the token,
+  // or both email and password, is required.
+  token: null,
+  email: null,
+  password: null
+};
+
+
 let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   
   constructor(id, auth) {
     super(id, auth);
+    if ((auth.token == null) && ((auth.email == null) || (auth.password == null)))
+      throw new Error(`${ id }: token or email and password required`);
+    
     this.token    = auth.token;
     this.email    = auth.email;
     this.password = auth.password;

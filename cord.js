@@ -51,7 +51,7 @@ let cord = module.exports = implement(class cord {
     
     // Load plugins.
     for (let [ name, config ] of entries(this.config)) {
-      if (!config.enabled) continue;
+      if (config.enabled === false) continue;
       let PluginClass = require("./plugs/" + name);
       this.plugs[name] = new PluginClass(this, config);;
     }

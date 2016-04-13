@@ -241,6 +241,8 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
         (part === Socket.NewLine) ? "\n" :
         // If there's an Action identifier, format the message afterwards.
         (part === Socket.Action) ? (isAction = true, "") :
+        // User/channel objects should be bold.
+        (part instanceof Socket.Resolveable) ? `**${ part }**` :
         // If a discord user/channel is being mentioned, transform it to a proper mention.
         ((part instanceof Socket.Mention) && part.mentionable._discordMention) ? part._discordMention :
         // Otherwise just toString the part.

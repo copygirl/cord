@@ -66,7 +66,7 @@ let Socket = module.exports = implement(class Socket {
   
 }, EventEmitter);
 
-let Resolveable = implement(class Resolveable {
+Socket.Resolveable = implement(class Resolveable {
   
   constructor(socket) {
     EventEmitter.call(this);
@@ -90,7 +90,7 @@ let Resolveable = implement(class Resolveable {
   
 }, EventEmitter);
 
-Socket.User = class User extends Resolveable {
+Socket.User = class User extends Socket.Resolveable {
   
   constructor(socket) { super(socket); }
   
@@ -101,7 +101,7 @@ Socket.User = class User extends Resolveable {
   
 };
 
-Socket.Channel = class Channel extends Resolveable {
+Socket.Channel = class Channel extends Socket.Resolveable {
   
   constructor(socket) { super(socket); }
   

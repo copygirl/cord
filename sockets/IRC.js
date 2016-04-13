@@ -246,7 +246,11 @@ IRCSocket.Channel = class IRCChannel extends Socket.Channel {
     let message = new Socket.Message(this.socket, new Date(), this, this.socket.self, parts);
     let isAction = false;
     let content = join(map(parts, (part) =>
-        ((part === Socket.Action) ? (isAction = true, "") : part)
+        // Action messages should be sent differently.
+        (part === Socket.Action) ? (isAction = true, "") :
+        // User/channel objects should be bold.
+        (part instanceof Socket.Resolveable) ? `\x02${ part }\x0F` :
+        part
       ), "");
     let func = (isAction ? "action" : "say");
     this.socket._irc[func](this.name, content);

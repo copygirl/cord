@@ -151,11 +151,23 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     let target = this._getChannel(message.channel, true);
     let parts  = [ message.content ];
     
-    // TODO: Split up message into text, mentions, newlines and attachments.
-    // TODO: Detect action-style messages.
+    message = new Socket.Message(this, time, target, sender, parts);
+    
+    message.augment(
+      // Turn action-like messages into actual action messages.
+      [ /^_([^_]*)_$/, (_, text) => [ Socket.Action, text ] ],
+      // Turn discord mentions into their Socket.Mention equivalents.
+      [ /<(#|@)(\d{18})>/, (_, type, id) => {
+        let lookup = ((type == '#') ? "_getChannel" : "_getUser");
+        let thing = this[lookup](id);
+        return ((thing != null) ? thing.mention : null); } ],
+      // Turns newlines into the Socket equivalent.
+      [ /\n/, Socket.NewLine ]
+    );
+    
+    // TODO: Handle attachments.
     // TODO: Parse markdown formatting of messages.
     
-    message = new Socket.Message(this, time, target, sender, parts);
     this.emit("message", message);
     
   }

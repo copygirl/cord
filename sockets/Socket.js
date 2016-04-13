@@ -153,6 +153,44 @@ Socket.Message = class Message {
       this.target.send(...prepend(parts, this.sender.mention, ": "));
   }
   
+  /** Augment a message's text parts into something more appropriate.
+   *  Example usage:
+   *    augment(/Trump/, "Poop")
+   *    augment(/\buser:(\d+)\b/, (_, id) => getUser(id).mention)
+   *    augment([ /^\*(.*)\*$/, (_, text) => [ Socket.Action, text ] ],
+   *            [ /\n/, Socket.NewLine ])
+   */
+  augment(...augments) {
+    if (!(augments[0] instanceof Array))
+      augments = [ augments ];
+    
+    for (let i = 0; i < this.parts.length; i++) {
+      let part = this.parts[i];
+      if (typeof part != "string") continue;
+      
+      for (let [ regex, replace ] of augments) {
+        let result = regex.exec(part);
+        if (result == null) continue;
+        
+        if (replace instanceof Function) {
+          replace = replace(...result);
+          if (replace == null) continue;
+        }
+        
+        if (!(replace instanceof Array))
+          replace = [ replace ];
+        
+        let start = result.index;
+        let end   = start + result[0].length;
+        if (start > 0) replace.unshift(part.substring(0, start));
+        if (end < part.length) replace.push(part.substring(end));
+        
+        this.parts.splice(i--, 1, ...replace);
+        break;
+      }
+    }
+  }
+  
   toString() {
     let isAction = false;
     let content = join(map(this.parts, part =>

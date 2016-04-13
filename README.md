@@ -34,6 +34,7 @@ Formatting, mentions, actions, newlines, ...
 
 - **Logging**: Currently only logs messages to the console.
 - **Bridge**: Relays messages between linked channels.
+- **Respawn**: Automatically reconnects sockets because shit happens.
 
 ## Installation
 

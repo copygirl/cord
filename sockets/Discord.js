@@ -84,8 +84,11 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     this._discord.on("message", (msg) => this._message(msg));
     
     this._discord.on("disconnected", () => {
+      for (let user of this._users.values()) user.emit("removed");
+      for (let channel of this._channels.values()) channel.emit("removed");
       this._users.clear();
       this._channels.clear();
+      
       this.emit("disconnected", ((this.isConnected)
         ? "Disconnected" : "Unable to connect / login"));
     });
@@ -168,8 +171,12 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     // TODO: Handle attachments.
     // TODO: Parse markdown formatting of messages.
     
-    this.emit("preMessage", message);
-    if (message.abort) return;
+    // Only fire "preMessage" event for incoming messages.
+    // Outgoing ones are already handled by DiscordChannel._send.
+    if (!message.sender.isSelf) {
+      this.emit("preMessage", message);
+      if (message.abort) return;
+    }
     
     this.emit("message", message);
     

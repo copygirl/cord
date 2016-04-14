@@ -94,6 +94,8 @@ let IRCSocket = module.exports = class IRCSocket extends Socket {
       this.emit("disconnected", `Aborted after ${ retries } retries`); });
     
     this.on("disconnected", () => {
+      for (let user of this._users.values()) user.emit("removed");
+      for (let channel of this._channels.values()) channel.emit("removed");
       this._users.clear();
       this._channels.clear();
     });
@@ -162,10 +164,8 @@ let IRCSocket = module.exports = class IRCSocket extends Socket {
     // TODO: Private channels.
     
     let message = new Socket.Message(this, new Date(), to, from, parts);
-    
     this.emit("preMessage", message);
     if (message.abort) return;
-    
     this.emit("message", message);
   }
   

@@ -40,6 +40,7 @@ let cord = module.exports = implement(class cord {
   run() {
     // Initialize sockets.
     for (let [ name, authData ] of entries(auth)) {
+      if (authData.enabled === false) continue;
       let SocketClass = require("./sockets/" + authData.socket);
       let socket = new SocketClass(name, authData);
       this.sockets[name] = socket;

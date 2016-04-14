@@ -65,7 +65,6 @@ module.exports = class Bridge extends Plug {
   }
   
   activate() {
-    this.debug("Activated");
     this.cord.on("message", (message) => {
       // Make sure the message was from a user and to a channel.
       if (!(message.sender instanceof Socket.User) ||

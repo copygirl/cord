@@ -154,19 +154,22 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     message = new Socket.Message(this, time, target, sender, parts);
     
     message.augment(
-      // Turn action-like messages into actual action messages.
+      // Turn action-like messages into Socket.Action messages.
       [ /^_([^_]*)_$/, (_, text) => [ Socket.Action, text ] ],
-      // Turn discord mentions into their Socket.Mention equivalents.
+      // Turn discord mentions into their Socket equivalents.
       [ /<(#|@)(\d{18})>/, (_, type, id) => {
         let lookup = ((type == '#') ? "_getChannel" : "_getUser");
         let thing = this[lookup](id);
         return ((thing != null) ? thing.mention : null); } ],
-      // Turns newlines into the Socket equivalent.
+      // Turn newlines into the Socket equivalent.
       [ /\n/, Socket.NewLine ]
     );
     
     // TODO: Handle attachments.
     // TODO: Parse markdown formatting of messages.
+    
+    this.emit("preMessage", message);
+    if (message.abort) return;
     
     this.emit("message", message);
     
@@ -246,9 +249,16 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
   send(...parts) { this._send(parts, false); }
   sendSilent(...parts) { this._send(parts, true); }
   
-  _send(parts, silent) {
+  _send(parts, silent = false) {
+    let message = new Socket.Message(this.socket, new Date(), this, this.socket.self, parts);
+    
+    if (!silent) {
+      this.socket.emit("preMessage", message);
+      if (message.abort) return;
+    }
+    
     let isAction = false;
-    let content = join(map(parts, (part) =>
+    let content = join(map(message.parts, (part) =>
         // Get dem newlines in here!
         (part === Socket.NewLine) ? "\n" :
         // If there's an Action identifier, format the message afterwards.

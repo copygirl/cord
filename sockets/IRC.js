@@ -152,14 +152,20 @@ let IRCSocket = module.exports = class IRCSocket extends Socket {
   }
   
   _message(from, to, parts) {
-    // If from is undefined, the message is from the server
+    // If from is undefined, the message is from the server.
     if (from == null) return;
-    // TODO: Handle server messages?
-    //       this.self is null until logged in
+    // TODO: Handle server messages? this.self is null until logged in.
+    
     from = this._getUser(from, true);
     to   = this._getChannel(to) || this.self;
-    // TODO: Private channels
+    
+    // TODO: Private channels.
+    
     let message = new Socket.Message(this, new Date(), to, from, parts);
+    
+    this.emit("preMessage", message);
+    if (message.abort) return;
+    
     this.emit("message", message);
   }
   
@@ -185,6 +191,7 @@ let IRCSocket = module.exports = class IRCSocket extends Socket {
       this._irc.connect();
       
       // _irc.conn is only set after .connect() is called.
+      // TODO: See if this works the way it's supposed to.
       this._irc.conn.on("close", (err) => {
         if (this.isConnected) this.emit("disconnected", `Socket closed`); });
       this._irc.conn.on("error", (err) => {
@@ -239,22 +246,30 @@ IRCSocket.Channel = class IRCChannel extends Socket.Channel {
   get topic() { return this._topic; }
   get users() { return this._users; }
   
-  send(...parts) { this._send(parts, true); }
-  sendSilent(...parts) { this._send(parts, false); }
+  send(...parts) { this._send(parts, false); }
+  sendSilent(...parts) { this._send(parts, true); }
   
-  _send(parts, fireEvent) {
+  _send(parts, silent) {
     let message = new Socket.Message(this.socket, new Date(), this, this.socket.self, parts);
+    
+    if (!silent) {
+      this.socket.emit("preMessage", message);
+      if (message.abort) return;
+    }
+    
     let isAction = false;
-    let content = join(map(parts, (part) =>
+    let content = join(map(message.parts, (part) =>
         // Action messages should be sent differently.
         (part === Socket.Action) ? (isAction = true, "") :
         // User/channel objects should be bold.
         (part instanceof Socket.Resolveable) ? `\x02${ part }\x0F` :
         part
       ), "");
+    
     let func = (isAction ? "action" : "say");
     this.socket._irc[func](this.name, content);
-    if (fireEvent) this.socket.emit("message", message);
+    
+    if (!silent) this.socket.emit("message", message);
   }
   
 };

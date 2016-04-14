@@ -19,12 +19,16 @@ let Socket = module.exports = implement(class Socket {
     this.on("connected",    (self)   => { this.self = self; });
     this.on("disconnected", (reason) => { this.self = null; });
     
-    this.on("message", (message) => {
-      if (message.target instanceof Socket.Channel)
-        message.target.emit("message", message);
-      if (message.sender instanceof Socket.User)
-        message.sender.emit("message", message);
-    });
+    // DRY - Don't repeat yourself!
+    // Though, I *might* have taken this a *little* to far.
+    let redirectMessageEvent = (event) =>
+      this.on(event, (msg) => {
+        if (msg.target instanceof Socket.Channel) msg.target.emit(event, msg);
+        if (msg.sender instanceof Socket.User) msg.sender.emit(event, msg);
+      });
+    
+    redirectMessageEvent("message");
+    redirectMessageEvent("preMessage");
   }
   
   /** Returns an iterable of known users. */
@@ -60,7 +64,8 @@ let Socket = module.exports = implement(class Socket {
   // on("newUser",    (user)    => ...)
   // on("newChannel", (channel) => ...)
   
-  // on("message", (message) => ...)
+  // on("message",    (message) => ...)
+  // on("preMessage", (message) => ...)
   
   toString() { throw new Error("Not implemented"); }
   

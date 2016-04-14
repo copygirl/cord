@@ -26,6 +26,10 @@ let cord = module.exports = implement(class cord {
   // on("message", (message) => ...)
   //   Note that the message event fires for outgoing
   //   messages as well, unless sendSilent was used.
+  // on("preMessage", (message) => ...)
+  //   Fires before "message" (for both incoming and outgoing
+  //   messages), allows for augmenting and outright dropping
+  //   the message by setting message.abort to true.
   
   resolve(resolveStr) {
     let [ socketName, str ] = resolveStr.split(":", 2);
@@ -46,7 +50,8 @@ let cord = module.exports = implement(class cord {
       socket.on("newUser",    (user) =>    this.emit("newUser", user));
       socket.on("newChannel", (channel) => this.emit("newChannel", channel));
       
-      socket.on("message", (message) => this.emit("message", message));
+      socket.on("message",    (message) => this.emit("message", message));
+      socket.on("preMessage", (message) => this.emit("preMessage", message));
     }
     
     // Load plugins.

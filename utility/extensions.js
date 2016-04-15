@@ -1,5 +1,12 @@
 "use strict";
 
+/** Returns a new string with some characters (index .. count)
+ *  removed and the specified arguments inserted, replacing them. */
+String.prototype.splice = function(index, count, ...args) {
+  return `${ str.slice(0, index) }${ args.join("") }${str.slice(index + count)}`;
+};
+
+
 /** Removes all values from this array. */
 Array.prototype.clear = function() {
   this.length = 0;

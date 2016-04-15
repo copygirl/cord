@@ -1,5 +1,6 @@
 "use strict";
 
+// TODO: Move this utility stuff to its own package.
 let iterable = require("./iterable");
 
 /** Extends the target object with all properties of the source objects. */

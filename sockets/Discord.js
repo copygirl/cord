@@ -160,7 +160,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
       // Turn action-like messages into Socket.Action messages.
       [ /^_([^_]*)_$/, (_, text) => [ Socket.Action, text ] ],
       // Turn discord mentions into their Socket equivalents.
-      [ /<(#|@)(\d{18})>/, (_, type, id) => {
+      [ /<(#|@)(\d{17,18})>/, (_, type, id) => {
         let lookup = ((type == '#') ? "_getChannel" : "_getUser");
         let thing = this[lookup](id);
         return ((thing != null) ? thing.mention : null); } ],
@@ -211,7 +211,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   
   type(resolveStr) {
     // TODO: Allow resolving @username for mentions.
-    let result = /^(?:(?:(\d{18})\/)?#([^\d].+)|#(\d{18})|@(\d{18}))$/.exec(resolveStr);
+    let result = /^(?:(?:(\d{17,18})\/)?#([^\d].+)|#(\d{17,18})|@(\d{17,18}))$/.exec(resolveStr);
     return ((result != null) ? ((result[4] != null) ? "user" : "channel")
                              : null);
   }

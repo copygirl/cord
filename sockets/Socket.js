@@ -207,6 +207,7 @@ Socket.Message = class Message {
         let result = testFunc(part);
         if (result === false) continue;
         else if (result == null) result = [ ];
+        else if (result === true) result = [ part ];
         else if (!(result instanceof Array)) result = [ result ];
         
         let replace = ((action instanceof Function) ? action(...result) : action);

@@ -262,9 +262,9 @@ IRCSocket.Channel = class IRCChannel extends Socket.Channel {
       // Action messages should be sent differently.
       [ Socket.Action, () => (isAction = true, null) ],
       // User/channel objects should be bold.
-      [ Socket.Resolveable, [ '\x02', part, '\x0F' ] ],
+      [ Socket.Resolveable, (part) => [ '\x02', part, '\x0F' ] ],
       // Ping protection - Insert zero-width space in people's names.
-      [ Socket.User, part.toString().splice(1, 0, '\u200B') ]
+      [ Socket.User, (part) => part.toString().splice(1, 0, '\u200B') ]
     );
     
     let func = (isAction ? "action" : "say");

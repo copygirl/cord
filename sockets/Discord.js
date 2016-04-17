@@ -269,12 +269,14 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
       // Get dem newlines in here!
       [ Socket.NewLine, "\n" ],
       // If there's an Action identifier, format the message afterwards.
-      [ Socket.Action, (part) => (isAction = true, null) ],
+      [ Socket.Action, () => (isAction = true, null) ],
       // User/channel objects should be bold.
-      [ Socket.Resolveable, [ "**", part, "**" ] ],
+      [ Socket.Resolveable, (part) => [ "**", part, "**" ] ],
       // If a discord user/channel is being mentioned, transform it to a proper mention.
       [ Socket.Mention, (part) => ((part.mentionable._discordMention) ? part._discordMention : part) ]
     );
+    
+    let content = message.parts.join("");
     if (isAction) content = `_${ content }_`;
     
     let promise = this.socket._discord.sendMessage(this._discordChannel, content);

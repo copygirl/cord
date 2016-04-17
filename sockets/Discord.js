@@ -279,6 +279,14 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
     let content = message.parts.join("");
     if (isAction) content = `_${ content }_`;
     
+    // Replace @user and #channel mentions into their Discord equivalent.
+    if (content.includes('@'))
+      for (let user of this.socket._discord.users)
+        content = content.replace(`@${ user.username }`, user.mention());
+    if (content.includes('#'))
+      for (let channel of this.socket._discord.channels)
+        content = content.replace(`#${ channel.name }`, channel.mention());
+    
     let promise = this.socket._discord.sendMessage(this._discordChannel, content);
     
     if (silent) {

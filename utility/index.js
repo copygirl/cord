@@ -1,7 +1,14 @@
 "use strict";
 
 // TODO: Move this utility stuff to its own package.
+
 let iterable = require("./iterable");
+
+
+/** Returns if the specified object is an ES6 class. */
+exports.isClass = function(obj) {
+  return ((typeof obj == "function") && /^\s*class\s+/.test(obj.toString()));
+}
 
 /** Extends the target object with all properties of the source objects. */
 let extend = exports.extend = function(target, ...sources) {

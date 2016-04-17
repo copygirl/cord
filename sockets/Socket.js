@@ -2,7 +2,9 @@
 
 let { EventEmitter } = require("events");
 
-let { implement, map, prepend, join } = require("../utility");
+let { isClass, implement, type,
+      UnexpectedTypeError,
+      map, prepend, join } = require("../utility");
 
 
 /** The Socket class defines a common interface for connections.
@@ -158,40 +160,68 @@ Socket.Message = class Message {
       this.target.send(...prepend(parts, this.sender.mention, ": "));
   }
   
-  /** Augment a message's text parts into something more appropriate.
-   *  Example usage:
-   *    augment(/Trump/, "Poop")
-   *    augment(/\buser:(\d+)\b/, (_, id) => getUser(id).mention)
-   *    augment([ /^\*(.*)\*$/, (_, text) => [ Socket.Action, text ] ],
-   *            [ /\n/, Socket.NewLine ])
-   */
+  /** Augments a message's parts into something more appropriate.
+   *  For some example uses, check the Socket implementations' code,
+   *  specifically the part where it receives and sends messages. */
   augment(...augments) {
     if (!(augments[0] instanceof Array))
       augments = [ augments ];
     
-    for (let i = 0; i < this.parts.length; i++) {
-      let part = this.parts[i];
-      if (typeof part != "string") continue;
+    for (let augment of augments) {
+      if (!(augment instanceof Array)) throw new UnexpectedTypeError(augment, Array);
+      if (augment.length != 2) throw new Error("An augmentation must have exactly 2 elements");
       
-      for (let [ regex, replace ] of augments) {
-        let result = regex.exec(part);
-        if (result == null) continue;
+      let [ test, action ] = augment;
+      let testFunc;     // Function used to test if the part matches the test parameter.
+      let after = null; // Function executed after the replace parameter has been applied.
+                        // May return a number, which is the amount of parts to go back.
+      
+      // If the test parameter is a regex, match any string parts against it.
+      // For example: /Trump/, "Drumpf"
+      //              /<(.*)>/, (_, thing) => lookup(thing)
+      if (test instanceof RegExp) {
+        testFunc = (part) => ((typeof part == "string") && test.exec(part) || false);
+        // Insert the text before and after the regex match into the replace array.
+        after = (part, result, replace) => {
+          let start = result.index;
+          let end   = start + result[0].length;
+          if (start > 0) replace.unshift(part.slice(0, start));
+          if (end < part.length) replace.push(part.slice(end));
+          // If there's more text to the right of
+          // the match, we want to check that too.
+          return ((end < part.length) ? 1 : 0);
+        };
+      // If the test parameter is a class, do an instanceof test.
+      // For example: Socket.User, (user) => [ "(", user.rank, ")", "<", user, ">" ]
+      } else if (isClass(test))
+        testFunc = (part) => (part instanceof test);
+      // Lastly, if the test parameter is not a function, use equality checking.
+      // For example: Socket.Action, (text) => [ "* ", text ]
+      // Otherwise just use the function itself.
+      else if (!(test instanceof Function))
+        testFunc = (part) => (part === test);
+      
+      for (let i = 0; i < this.parts.length; i++) {
+        let part = this.parts[i];
         
-        if (replace instanceof Function) {
-          replace = replace(...result);
-          if (replace == null) continue;
+        let result = testFunc(part);
+        if (result === false) continue;
+        else if (result == null) result = [ ];
+        else if (!(result instanceof Array)) result = [ result ];
+        
+        let replace = ((action instanceof Function) ? action(...result) : action);
+        if (replace === false) continue;
+        else if (replace == null) replace = [ ];
+        else if (!(replace instanceof Array)) replace = [ replace ];
+        
+        let recheckAmount = 0;
+        if (after != null) {
+          recheckAmount = after(part, result, replace);
+          recheckAmount = Math.min(recheckAmount, replace.length);
         }
         
-        if (!(replace instanceof Array))
-          replace = [ replace ];
-        
-        let start = result.index;
-        let end   = start + result[0].length;
-        if (start > 0) replace.unshift(part.substring(0, start));
-        if (end < part.length) replace.push(part.substring(end));
-        
-        this.parts.splice(i--, 1, ...replace);
-        break;
+        this.parts.splice(i, 1, ...replace);
+        i += replace.length - 1 - recheckAmount;
       }
     }
   }

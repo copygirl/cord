@@ -265,18 +265,16 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
     }
     
     let isAction = false;
-    let content = join(map(message.parts, (part) =>
-        // Get dem newlines in here!
-        (part === Socket.NewLine) ? "\n" :
-        // If there's an Action identifier, format the message afterwards.
-        (part === Socket.Action) ? (isAction = true, "") :
-        // User/channel objects should be bold.
-        (part instanceof Socket.Resolveable) ? `**${ part }**` :
-        // If a discord user/channel is being mentioned, transform it to a proper mention.
-        ((part instanceof Socket.Mention) && part.mentionable._discordMention) ? part._discordMention :
-        // Otherwise just toString the part.
-        part
-      ), "");
+    message.augment(
+      // Get dem newlines in here!
+      [ Socket.NewLine, "\n" ],
+      // If there's an Action identifier, format the message afterwards.
+      [ Socket.Action, (part) => (isAction = true, null) ],
+      // User/channel objects should be bold.
+      [ Socket.Resolveable, [ "**", part, "**" ] ],
+      // If a discord user/channel is being mentioned, transform it to a proper mention.
+      [ Socket.Mention, (part) => ((part.mentionable._discordMention) ? part._discordMention : part) ]
+    );
     if (isAction) content = `_${ content }_`;
     
     let promise = this.socket._discord.sendMessage(this._discordChannel, content);

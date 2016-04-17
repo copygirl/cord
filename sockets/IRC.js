@@ -258,16 +258,17 @@ IRCSocket.Channel = class IRCChannel extends Socket.Channel {
     }
     
     let isAction = false;
-    let content = join(map(message.parts, (part) =>
-        // Action messages should be sent differently.
-        (part === Socket.Action) ? (isAction = true, "") :
-        // User/channel objects should be bold.
-        (part instanceof Socket.Resolveable) ? `\x02${ part }\x0F` :
-        part
-      ), "");
+    message.augment(
+      // Action messages should be sent differently.
+      [ Socket.Action, () => (isAction = true, null) ],
+      // User/channel objects should be bold.
+      [ Socket.Resolveable, [ '\x02', part, '\x0F' ] ],
+      // Ping protection - Insert zero-width space in people's names.
+      [ Socket.User, part.toString().splice(1, 0, '\u200B') ]
+    );
     
     let func = (isAction ? "action" : "say");
-    this.socket._irc[func](this.name, content);
+    this.socket._irc[func](this.name, message.parts.join(""));
     
     if (!silent) this.socket.emit("message", message);
   }

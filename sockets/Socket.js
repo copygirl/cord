@@ -227,12 +227,16 @@ Socket.Message = class Message {
     }
   }
   
-  toString() {
+  toString(more = false) {
     let isAction = false;
     let content = join(map(this.parts, part =>
       ((part == Socket.Action) ? (isAction = true, "") : part)), "");
-    let sender = (isAction ? `* ${ this.sender }` : `<${ this.sender }>`);
-    return `[${ this.target }] ${ sender } ${ content }`;
+    let pre = (isAction ? `* ${ this.sender }` : `<${ this.sender }>`);
+    if (more) {
+      let time = this.time.toISOString().substr(11, 5);
+      pre = `(${ time }) [${ this.target }] ${ pre }`
+    }
+    return `${ pre } ${ content }`;
   }
   
 };

@@ -30,8 +30,8 @@ let channelChars = new Set([ '#' ]);
 
 let IRCSocket = module.exports = class IRCSocket extends Socket {
   
-  constructor(id, auth) {
-    super(id, auth);
+  constructor(cord, id, auth) {
+    super(cord, id, auth);
     if (auth.server == null) throw new Error(`${ id }: server required`);
     if (auth.nick == null) throw new Error(`${ id }: nick required`);
     if (auth.channels.length == 0) this.warn("No channels specified");

@@ -6,21 +6,6 @@ let Socket = require("../sockets/Socket");
 let { extend, filter, any, first } = require("../utility");
 
 
-/* Example configuration:
-  "Bridge": {
-    "debug": false,
-    "ignore": [
-      "irc:Inumuta",
-      "discord:@164511461316493313"
-    ],
-    "bridges": [
-      { "channels": [ "irc:#cord",    "discord:107923656885157888/#general" ] },
-      { "channels": [ "irc:#projekt", "discord:#projekt" ] },
-      { "channels": [ "irc:#test",    "discord:#162192835980820481" ], "ignore": "irc:Ruby" },
-      { "channels": [ "irc:#test1", "irc:#test2", "otherirc:#test", "discord:#mytest" ], "enabled": false }
-    ]
-  } */
-
 let defaults = {
   ignore: [ ],
   bridges: [ ]
@@ -76,7 +61,7 @@ module.exports = class Bridge extends Plug {
       // If user is ignored globally, skip this message.
       if (any(this.config.ignore, (e) => userResolves.has(e))) return;
       
-      //this.debug(`${ target } resolves to [ ${ target.resolveStrings.join(", ") } ]`)
+      //this.debug(`${ message.target } resolves to [ ${ message.target.resolveStrings.join(", ") } ]`);
       for (let resolve of message.target.resolveStrings) {
         resolve = `${ message.socket.id }:${ resolve }`;
         let bridges = this._relayMap.get(resolve);

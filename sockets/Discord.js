@@ -17,8 +17,8 @@ let defaults = {
 
 let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   
-  constructor(id, auth) {
-    super(id, auth);
+  constructor(cord, id, auth) {
+    super(cord, id, auth);
     if ((auth.token == null) && ((auth.email == null) || (auth.password == null)))
       throw new Error(`${ id }: token or email and password required`);
     

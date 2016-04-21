@@ -6,7 +6,7 @@ let { extend } = require("../utility");
 
 
 let defaults = {
-  initial: 1,   // Starting delay in seconds.
+  initial: 2,   // Starting delay in seconds.
   factor: 2,    // After a failed reconnection attempt, multiply current delay by this factor.
   maximum: 64,  // Maximum delay between reconnection attempts in seconds.
   retries: null // Maximum number of retries after giving up completely (null = retry FOREVER!!).

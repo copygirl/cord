@@ -37,6 +37,10 @@ let cord = module.exports = implement(class cord {
     return ((socket != null) ? socket.resolve(str) : null);
   }
   
+  log(level, source, ...args) {
+    console[func](`[${ level }|${ source }]`, args);
+  }
+  
   run() {
     // Initialize sockets.
     for (let [ name, authData ] of entries(auth)) {

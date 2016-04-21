@@ -30,10 +30,10 @@ module.exports = class Respawn extends Plug {
     socket.reconnecting = true;
     
     if ((this.config.retries != null) && (attempt > this.config.retries))
-      return this.log(`Gave up reconnecting to ${ socket } after ${ attempt } attempts.`);
+      return this.info(`Gave up reconnecting to ${ socket } after ${ attempt } attempts.`);
     
     let s = Math.round(delay);
-    this.log(`Reconnecting in ${ s } second${ ((s == 1) ? "" : "s") }...`)
+    this.info(`Reconnecting in ${ s } second${ ((s == 1) ? "" : "s") }...`)
     
     setTimeout(() => {
       delay = Math.min(delay * this.config.factor, this.config.maximum);

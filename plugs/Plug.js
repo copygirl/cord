@@ -18,13 +18,9 @@ module.exports = class Plug {
   
   activate() { throw new Error("Not implemented"); }
   
-  log(...args) {
-    console.log(`[INFO|${ this.constructor.name }]`, ...args); }
-  warn(...args) {
-    console.log(`[WARN|${ this.constructor.name }]`, ...args); }
-  debug(...args) {
-    if (this.config.debug)
-      console.log(`[DEBUG|${ this.constructor.name }]`, ...args);
-  }
+  info(...args) { this.cord.log("info", this, ...args); }
+  warn(...args) { this.cord.log("warn", this, ...args); }
+  error(...args) { this.cord.log("error", this, ...args); }
+  debug(...args) { if (this.config.debug) this.cord.log("info", this, ...args); }
   
 };

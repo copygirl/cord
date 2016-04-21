@@ -5,18 +5,11 @@ let Plug = require("./Plug");
 let { extend, entries } = require("../utility");
 
 
-/* Example configuration:
-  "Logging": {
-    format: "[$socket] $message",
-    names: {
-      esper:    "Esper    IRC",
-      freenode: "freenode IRC",
-      discord:  "     Discord"
-    }
-  } */
-
 let defaults = {
-  format: "($time) [$socket] $message",
+  format: {
+    general: "($time) ($source|$level)",
+    message: "($time) [$source|$target]"
+  },
   names: { }
 };
 
@@ -35,16 +28,29 @@ module.exports = class Logging extends Plug {
     for (let [ name, socket ] of entries(this.cord.sockets))
       this.nameMap.set(socket, (this.config.names[name] || name));
     
-    this.cord.on("connected",    (socket)         => this.log(socket, "Connected!"));
-    this.cord.on("disconnected", (socket, reason) => this.log(socket, `Disconnected: ${ reason }`));
-    this.cord.on("message",      (message)        => this.log(message.socket, message.toString()));
+    this.cord.on("connected",    (socket)         => this.log("info", socket, "Connected!"));
+    this.cord.on("disconnected", (socket, reason) => this.log("info", socket, `Disconnected: ${ reason }`));
+    this.cord.on("message",      (message)        => this.message(message));
+    
+    this.cord.log = this.log.bind(this);
   }
   
-  log(socket, message, time = message.time || new Date()) {
-    console.log(this.config.format
-      .replace("$time", time.toISOString().substr(11, 5))
-      .replace("$socket", this.nameMap.get(socket))
-      .replace("$message", message));
+  log(level, source, ...args) {
+    console[(level == "error") ? "error" : "log"](
+      this.config.format.general
+        .replace("$time", (new Date()).toISOString().substr(11, 5))
+        .replace("$source", this.nameMap.get(source) || source.constructor.name)
+        .replace("$level", level.toUpperCase()),
+      ...args);
+  }
+  
+  message(message) {
+    console.log(
+      this.config.format.message
+        .replace("$time", (new Date()).toISOString().substr(11, 5))
+        .replace("$source", this.nameMap.get(message.socket))
+        .replace("$target", message.target),
+      message.toString());
   }
   
 };

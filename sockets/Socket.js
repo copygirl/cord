@@ -11,8 +11,9 @@ let { isClass, implement, type,
  *  Each socket represents a service / server such as IRC / Discord. */
 let Socket = module.exports = implement(class Socket {
   
-  constructor(id, auth) {
+  constructor(cord, id, auth) {
     EventEmitter.call(this);
+    this.cord = cord;
     this.id   = id;
     this.self = null;
     
@@ -46,9 +47,11 @@ let Socket = module.exports = implement(class Socket {
   disconnect(reason) { throw new Error("Not implemented"); }
   
   /** Prints an information message to the console. */
-  log(...args) { console.log(`[INFO|${ this.id }]`, ...args) }
+  info(...args) { this.cord.log("info", this, ...args) }
   /** Prints a warning message to the console. */
-  warn(...args) { console.log(`[WARN|${ this.id }]`, ...args) }
+  warn(...args) { this.cord.log("warn", this, ...args) }
+  /** Prints an error message to the console. */
+  error(...args) { this.cord.log("error", this, ...args) }
   
   /** Returns a string depending on the expected type of the resolve string.
    *  That is, "user", "channel" or null for an invalid resolve string. */

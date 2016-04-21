@@ -279,7 +279,7 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
     let content = message.parts.join("");
     if (isAction) content = `_${ content }_`;
     
-    // Replace @user and #channel mentions into their Discord equivalent.
+    // Replace @user and #channel mentions with their Discord equivalent.
     if (content.includes('@'))
       for (let user of this.socket._discord.users)
         content = content.replace(`@${ user.username }`, user.mention());
@@ -291,9 +291,22 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
     
     if (silent) {
       this.socket._silentMessageCount++;
-      promise.then((message) => this.socket._message(message, true),
-                   (error)   => this.socket._reduceSilentMessage());
-      // TODO: Do something with failed messages?
+      
+      let to = setTimeout(() => {
+        this.socket.warn(`sendMessage not resolved/rejected after 5 seconds:\n  ${ message.toString(true) }`);
+        this.socket._reduceSilentCount();
+      }, 5000);
+      
+      promise.then(
+        (message) => {
+          this.socket._message(message, true);
+          clearTimeout(to); },
+        (error) => {
+          // TODO: Do something with failed messages?
+          this.socket.warn(`Message could not be sent:\n  ${ message.toString(true) }`);
+          this.socket._reduceSilentCount();
+          clearTimeout(to); }
+      );
     }
   }
   

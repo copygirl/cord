@@ -116,7 +116,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   }
   
   
-  _message(message, silent = false) {
+  _message(message) {
     
     // Since the discord message event and the sendMessage promise resolve happen at completely
     // different times (probably due to the former going over websockets and the latter being the
@@ -128,18 +128,9 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     // received, it is removed from the buffer to make sure it doesn't fire a message event. Once
     // all silent messages have been received, all buffered messages will be "released".
     
-    if (silent) {
-      if (this._pendingMessages.delete(message) == 0)
-        // If we didn't receive the message though
-        // the message event yet, keep track of it.
-        this._missingSilentMsgs.add(message.id);
-      
-      this._reduceSilentCount();
-      return;
-    }
     // We found one of those missing silent messages! Let's make sure
     // it doesn't fire a message event just because it's a little late.
-    else if (this._missingSilentMsgs.delete(message.id))
+    if (this._missingSilentMsgs.delete(message.id))
       return;
     
     // If there's silent messages that we're currently
@@ -292,16 +283,26 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
     if (silent) {
       this.socket._silentMessageCount++;
       
+      let timedOut = false;
       let to = setTimeout(() => {
         this.socket.warn(`sendMessage not resolved/rejected after 5 seconds:\n  ${ message.toString(true) }`);
         this.socket._reduceSilentCount();
+        timedOut = true;
       }, 5000);
       
       promise.then(
         (message) => {
-          this.socket._message(message, true);
+          if (timedOut) return;
+          
+          if (this.socket._pendingMessages.delete(message) == 0)
+            // If we didn't receive the message though
+            // the message event yet, keep track of it.
+            this.socket._missingSilentMsgs.add(message.id);
+          this.socket._reduceSilentCount();
+          
           clearTimeout(to); },
         (error) => {
+          if (timedOut) return;
           // TODO: Do something with failed messages?
           this.socket.warn(`Message could not be sent:\n  ${ message.toString(true) }`);
           this.socket._reduceSilentCount();

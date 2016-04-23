@@ -26,6 +26,11 @@ Array.prototype.delete = function(...values) {
   return count;
 };
 
+/** Returns a random element from this array. */
+Array.prototype.random = function() {
+  return this[Math.floor(Math.random() * this.length)];
+};
+
 
 /** Attempts to get a value from this map using the specified key. If the key doesn't
  *  exist, the specified default value is added using the key and returned.

@@ -3,6 +3,7 @@
 // TODO: Move this utility stuff to its own package.
 
 let iterable = require("./iterable");
+let reflect  = require("./reflect");
 
 
 /** Returns if the specified object is an ES6 class. */
@@ -79,8 +80,9 @@ exports.UnexpectedTypeError = class UnexpectedTypeError extends Error {
   }
 };
 
-// Export iterable functions through this module.
-extend(exports, iterable);
+
+// Export other module functions through this module.
+extend(exports, iterable, reflect);
 
 // Make extensions happen! This just executes the
 // extensions script, which extends existing classes.

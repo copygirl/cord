@@ -85,6 +85,10 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
       this._users.clear();
       this._channels.clear();
       
+      // Clean up Discord.js' internal state.
+      // This is needed to reconnect properly.
+      this._discord.internal.setup();
+      
       this.emit("disconnected", ((this.isConnected)
         ? "Disconnected" : "Unable to connect / login"));
     });
@@ -181,7 +185,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
                              : null);
   }
   
-  toString() { return `Discord (${ this.email })`; }
+  toString() { return `Discord`; }
   
 };
 

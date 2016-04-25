@@ -30,10 +30,6 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     this._users    = new Map();
     this._channels = new Map();
     
-    this._pendingMessages    = [ ];
-    this._missingSilentMsgs  = new Set();
-    this._silentMessageCount = 0;
-    
     this._discord.on("ready", () => {
       this.emit("connected", this._getUser(this._discord.user, true));
       
@@ -116,29 +112,10 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   }
   
   
-  _message(message) {
+  _message(message, sent = false) {
     
-    // Since the discord message event and the sendMessage promise resolve happen at completely
-    // different times (probably due to the former going over websockets and the latter being the
-    // result of an API call), we don't know whether an incoming message is supposed to be silent
-    // or not until the promise does resolve (see DiscordSocket.Channel.sendSilent).
-    
-    // To fix this, whenever there are silent messages that have been sent but not yet resolved,
-    // any regular message coming through will get added to a buffer. When a silent message is
-    // received, it is removed from the buffer to make sure it doesn't fire a message event. Once
-    // all silent messages have been received, all buffered messages will be "released".
-    
-    // We found one of those missing silent messages! Let's make sure
-    // it doesn't fire a message event just because it's a little late.
-    if (this._missingSilentMsgs.delete(message.id))
-      return;
-    
-    // If there's silent messages that we're currently
-    // waiting for, add incoming messages to a buffer.
-    else if (this._silentMessageCount > 0) {
-      this._pendingMessages.push(message);
-      return;
-    }
+    // Skip incoming messages that were send by the bot's account.
+    if (!sent && (message.author == this._discord.user)) return;
     
     let time   = new Date(message.timestamp);
     let sender = this._getUser(message.author, true);
@@ -162,9 +139,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     // TODO: Handle attachments.
     // TODO: Parse markdown formatting of messages.
     
-    // Only fire "preMessage" event for incoming messages.
-    // Outgoing ones are already handled by DiscordChannel._send.
-    if (!message.sender.isSelf) {
+    if (!sent) {
       this.emit("preMessage", message);
       if (message.abort) return;
     }
@@ -279,36 +254,8 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
         content = content.replace(`#${ channel.name }`, channel.mention());
     
     let promise = this.socket._discord.sendMessage(this._discordChannel, content);
-    
-    if (silent) {
-      this.socket._silentMessageCount++;
-      
-      let timedOut = false;
-      let to = setTimeout(() => {
-        this.socket.warn(`sendMessage not resolved/rejected after 5 seconds:\n  ${ message.toString(true) }`);
-        this.socket._reduceSilentCount();
-        timedOut = true;
-      }, 5000);
-      
-      promise.then(
-        (message) => {
-          if (timedOut) return;
-          
-          if (this.socket._pendingMessages.delete(message) == 0)
-            // If we didn't receive the message though
-            // the message event yet, keep track of it.
-            this.socket._missingSilentMsgs.add(message.id);
-          this.socket._reduceSilentCount();
-          
-          clearTimeout(to); },
-        (error) => {
-          if (timedOut) return;
-          // TODO: Do something with failed messages?
-          this.socket.warn(`Message could not be sent:\n  ${ message.toString(true) }`);
-          this.socket._reduceSilentCount();
-          clearTimeout(to); }
-      );
-    }
+    if (!silent) promise.then((message) => this.socket._message(message, true));
+    // TODO: Do something about failed messages?
   }
   
 };

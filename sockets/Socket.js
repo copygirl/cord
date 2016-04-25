@@ -153,6 +153,90 @@ Socket.Message = class Message {
     this.parts  = parts;
   }
   
+  /** Augments a message's parts into something more appropriate.
+   *  For some example uses, check the Socket implementations' code,
+   *  specifically the part where it receives and sends messages. */
+  static augment(parts, test, action) {
+    
+    let testFunc;     // Function used to test if the part matches the test parameter.
+    let after = null; // Function executed after the replace parameter has been applied.
+                      // May return a number, which is the amount of parts to go back.
+    
+    // If the test parameter is a regex, match any string parts against it.
+    // For example: /Trump/, "Drumpf"
+    //              /<(.*)>/, (_, thing) => lookup(thing)
+    if (test instanceof RegExp) {
+      testFunc = (part) => ((typeof part == "string") && test.exec(part) || false);
+      // Insert the text before and after the regex match into the replace array.
+      after = (part, result, replace) => {
+        let start = result.index;
+        let end   = start + result[0].length;
+        if (start > 0) replace.unshift(part.slice(0, start));
+        if (end < part.length) replace.push(part.slice(end));
+        // If there's more text to the right of
+        // the match, we want to check that too.
+        return ((end < part.length) ? 1 : 0);
+      };
+    // If the test parameter is a class, do an instanceof test.
+    // For example: Socket.User, (user) => [ "(", user.rank, ")", "<", user, ">" ]
+    } else if (isClass(test))
+      testFunc = (part) => (part instanceof test);
+    // Lastly, if the test parameter is not a function, use equality checking.
+    // For example: Socket.Action, (text) => [ "* ", text ]
+    // Otherwise just use the function itself.
+    else if (!(test instanceof Function))
+      testFunc = (part) => (part === test);
+    
+    for (let i = 0; i < parts.length; i++) {
+      let part = parts[i];
+      
+      let result = testFunc(part);
+      if (result === false) continue;
+      else if (result == null) result = [ ];
+      else if (result === true) result = [ part ];
+      else if (!(result instanceof Array)) result = [ result ];
+      
+      let replace = ((action instanceof Function) ? action(...result) : action);
+      if (replace === false) continue;
+      else if (replace == null) replace = [ ];
+      else if (!(replace instanceof Array)) replace = [ replace ];
+      
+      let recheckAmount = 0;
+      if (after != null) {
+        recheckAmount = after(part, result, replace);
+        recheckAmount = Math.min(recheckAmount, replace.length);
+      }
+      
+      parts.splice(i, 1, ...replace);
+      i += replace.length - 1 - recheckAmount;
+    }
+    
+    return parts;
+    
+  }
+  
+  /** Augments a message's parts into something more appropriate.
+   *  For some example uses, check the Socket implementations' code,
+   *  specifically the part where it receives and sends messages. */
+  augment(test, action) {
+    Socket.Message.augment(this.parts, test, action);
+    return this;
+  }
+  
+  /** Augments a message's parts into something more appropriate.
+   *  For some example uses, check the Socket implementations' code,
+   *  specifically the part where it receives and sends messages.
+   *  This method doesn't modify the message's parts. */
+  augmentClone(...augments) {
+    if (!(augments[0] instanceof Array))
+      augments = [ augments ];
+    
+    let parts = this.parts.slice();
+    for (let [ test, action ] of augments)
+      Socket.Message.augment(parts, test, action);
+    return parts;
+  }
+  
   /** Replies to the message, mentioning the user the message was from. */
   reply(...parts) {
     if (!(this.target instanceof Socket.Channel))
@@ -161,73 +245,6 @@ Socket.Message = class Message {
       this.target.send(...parts);
     else if (this.sender instanceof Socket.User)
       this.target.send(...prepend(parts, this.sender.mention, ": "));
-  }
-  
-  /** Augments a message's parts into something more appropriate.
-   *  For some example uses, check the Socket implementations' code,
-   *  specifically the part where it receives and sends messages. */
-  augment(...augments) {
-    if (!(augments[0] instanceof Array))
-      augments = [ augments ];
-    
-    for (let augment of augments) {
-      if (!(augment instanceof Array)) throw new UnexpectedTypeError(augment, Array);
-      if (augment.length != 2) throw new Error("An augmentation must have exactly 2 elements");
-      
-      let [ test, action ] = augment;
-      let testFunc;     // Function used to test if the part matches the test parameter.
-      let after = null; // Function executed after the replace parameter has been applied.
-                        // May return a number, which is the amount of parts to go back.
-      
-      // If the test parameter is a regex, match any string parts against it.
-      // For example: /Trump/, "Drumpf"
-      //              /<(.*)>/, (_, thing) => lookup(thing)
-      if (test instanceof RegExp) {
-        testFunc = (part) => ((typeof part == "string") && test.exec(part) || false);
-        // Insert the text before and after the regex match into the replace array.
-        after = (part, result, replace) => {
-          let start = result.index;
-          let end   = start + result[0].length;
-          if (start > 0) replace.unshift(part.slice(0, start));
-          if (end < part.length) replace.push(part.slice(end));
-          // If there's more text to the right of
-          // the match, we want to check that too.
-          return ((end < part.length) ? 1 : 0);
-        };
-      // If the test parameter is a class, do an instanceof test.
-      // For example: Socket.User, (user) => [ "(", user.rank, ")", "<", user, ">" ]
-      } else if (isClass(test))
-        testFunc = (part) => (part instanceof test);
-      // Lastly, if the test parameter is not a function, use equality checking.
-      // For example: Socket.Action, (text) => [ "* ", text ]
-      // Otherwise just use the function itself.
-      else if (!(test instanceof Function))
-        testFunc = (part) => (part === test);
-      
-      for (let i = 0; i < this.parts.length; i++) {
-        let part = this.parts[i];
-        
-        let result = testFunc(part);
-        if (result === false) continue;
-        else if (result == null) result = [ ];
-        else if (result === true) result = [ part ];
-        else if (!(result instanceof Array)) result = [ result ];
-        
-        let replace = ((action instanceof Function) ? action(...result) : action);
-        if (replace === false) continue;
-        else if (replace == null) replace = [ ];
-        else if (!(replace instanceof Array)) replace = [ replace ];
-        
-        let recheckAmount = 0;
-        if (after != null) {
-          recheckAmount = after(part, result, replace);
-          recheckAmount = Math.min(recheckAmount, replace.length);
-        }
-        
-        this.parts.splice(i, 1, ...replace);
-        i += replace.length - 1 - recheckAmount;
-      }
-    }
   }
   
   toString(more = false) {

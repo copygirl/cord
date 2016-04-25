@@ -122,19 +122,18 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     let target = this._getChannel(message.channel, true);
     let parts  = [ message.content ];
     
-    message = new Socket.Message(this, time, target, sender, parts);
-    
-    message.augment(
+    message = new Socket.Message(this, time, target, sender, parts)
       // Turn action-like messages into Socket.Action messages.
-      [ /^_([^_]*)_$/, (_, text) => [ Socket.Action, text ] ],
+      .augment(/^_([^_]*)_$/, (_, text) => [ Socket.Action, text ])
       // Turn discord mentions into their Socket equivalents.
-      [ /<(#|@)(\d{17,18})>/, (_, type, id) => {
+      .augment(/<(#|@)(\d{17,18})>/, (_, type, id) => {
         let lookup = ((type == '#') ? "_getChannel" : "_getUser");
         let thing = this[lookup](id);
-        return ((thing != null) ? thing.mention : null); } ],
+        return ((thing != null) ? thing.mention : null);
+      })
       // Turn newlines into the Socket equivalent.
-      [ /\n/, Socket.NewLine ]
-    );
+      .augment(/\n/, Socket.NewLine);
+    
     
     // TODO: Handle attachments.
     // TODO: Parse markdown formatting of messages.
@@ -231,7 +230,7 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
     }
     
     let isAction = false;
-    message.augment(
+    let content = message.augmentClone(
       // Get dem newlines in here!
       [ Socket.NewLine, "\n" ],
       // If there's an Action identifier, format the message afterwards.
@@ -240,9 +239,7 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
       [ Socket.Resolveable, (part) => [ "**", part, "**" ] ],
       // If a discord user/channel is being mentioned, transform it to a proper mention.
       [ Socket.Mention, (part) => ((part.mentionable._discordMention) ? part._discordMention : part) ]
-    );
-    
-    let content = message.parts.join("");
+    ).join("");
     if (isAction) content = `_${ content }_`;
     
     // Replace @user and #channel mentions with their Discord equivalent.

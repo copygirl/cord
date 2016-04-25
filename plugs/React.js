@@ -41,11 +41,17 @@ let findResolveable = function(msg, v, restrict) {
 let transforms = {
   ["None"]:   (msg, v) => v,
   ["Number"]: (msg, v) => ((/^(0|-?[1-9][0-9]*)$/.test(v) &&
-                   Number.isSafeInteger(v = +v)) ? v : null),
-  ["Resolveable"]: (msg, v) => findResolveable(msg, v),
-  ["User"]:        (msg, v) => findResolveable(msg, v, "user"),
-  ["Channel"]:     (msg, v) => findResolveable(msg, v, "channel")
+                           Number.isSafeInteger(v = +v)) ? v : null),
+  ["Socket"]:             (msg, v) => msg.socket.cord.sockets[v],
+  ["Socket.Resolveable"]: (msg, v) => findResolveable(msg, v),
+  ["Socket.User"]:        (msg, v) => findResolveable(msg, v, "user"),
+  ["Socket.Channel"]:     (msg, v) => findResolveable(msg, v, "channel")
 };
+
+// Allow transforms to be used as Socket.XYZ and simply XYZ.
+for (let [ name, func ] of entries(transforms))
+  if (name.startsWith("Socket."))
+    transforms[name.slice(7)] = func;
 
 
 module.exports = class React extends Plug {
@@ -85,6 +91,7 @@ module.exports = class React extends Plug {
             `'${ param.name }' in comm '${ comm }':\n${ action }`);
           
           switch (param.name) {
+            case "cord":
             case "message":
             case "target":
             case "sender":
@@ -133,6 +140,7 @@ module.exports = class React extends Plug {
           
         }
         
+        // TODO: Catch and handle errors.
         let commAction = (message, content, args) => {
           if (!(comm instanceof RegExp) && (numParams != null) && ((args.length < numParams) ||
               (!inspect.spread && (args.length > numParams)))) return message.reply(
@@ -142,6 +150,7 @@ module.exports = class React extends Plug {
           let origArgs = [ ];
           for (let param of inspect.parameters)
             switch (param.name) {
+              case "cord": origArgs.push(this.cord); break;
               case "message": origArgs.push(message); break;
               case "target": origArgs.push(message.target); break;
               case "sender": origArgs.push(message.sender); break;

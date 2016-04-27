@@ -113,7 +113,7 @@ module.exports = class React extends Plug {
               break;
             
             case "match":
-              if (!(comm instanceof RegExp)) throw invalidParameterError();
+              if (!(comm instanceof RegExp) || comm.global) throw invalidParameterError();
               if (param.spread) throw invalidSpreadOperatorError();
               if (param.defaultValue) throw invalidDefaultValueError();
               if (numParams > 0) throw new Error(
@@ -194,7 +194,7 @@ module.exports = class React extends Plug {
       if (!(message.sender instanceof Socket.User) ||
           !(message.target instanceof Socket.Channel) ||
           message.sender.isSelf) return;
-          
+      
       let content = message.parts.join("");
       
       if (content.startsWith(this.config.prefix)) {
@@ -209,9 +209,18 @@ module.exports = class React extends Plug {
       }
       
       for (let [ regex, comm ] of this.regexes) {
-        let result = content.match(regex);
-        if (result != null)
-          return comm(message, content, result);
+        let result = regex.exec(content);
+        if (result == null) continue;
+        
+        // Global regexes should contain all matches.
+        if (regex.global) {
+          result = [ result ];
+          let match;
+          while (match = regex.exec(content))
+            result.push(match);
+        }
+        
+        return comm(message, content, result);
       }
       
     });

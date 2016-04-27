@@ -275,9 +275,12 @@ Socket.Mention = class Mention {
 
 Socket.Attachment = class Attachment {
   
-  constructor(url) { this.url = url; }
+  constructor(filename, url) {
+    this.url      = url;
+    this.filename = filename;
+  }
   
-  toString() { return this.url; }
+  toString() { return `["${ this.filename }" ${ this.url } ]`; }
   
 };
 

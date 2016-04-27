@@ -117,17 +117,17 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   }
   
   
-  _message(message, sent = false) {
+  _message(discordMsg, sent = false) {
     
     // Skip incoming messages that were send by the bot's account.
-    if (!sent && (message.author == this._discord.user)) return;
+    if (!sent && (discordMsg.author == this._discord.user)) return;
     
-    let time   = new Date(message.timestamp);
-    let sender = this._getUser(message.author, true);
-    let target = this._getChannel(message.channel, true);
-    let parts  = [ message.content ];
+    let time   = new Date(discordMsg.timestamp);
+    let sender = this._getUser(discordMsg.author, true);
+    let target = this._getChannel(discordMsg.channel, true);
+    let parts  = [ discordMsg.content ];
     
-    message = new Socket.Message(this, time, target, sender, parts)
+    let message = new Socket.Message(this, time, target, sender, parts)
       // Turn action-like messages into Socket.Action messages.
       .augment(/^_([^_]*)_$/, (_, text) => [ Socket.Action, text ])
       // Turn discord mentions into their Socket equivalents.
@@ -139,8 +139,9 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
       // Turn newlines into the Socket equivalent.
       .augment(/\n/, Socket.NewLine);
     
+    for (let attachment of discordMsg.attachments)
+      message.parts.push(" ", new Socket.Attachment(attachment.filename, attachment.url));
     
-    // TODO: Handle attachments.
     // TODO: Parse markdown formatting of messages.
     
     if (!sent) {

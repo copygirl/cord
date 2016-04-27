@@ -235,6 +235,20 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
     
     let isAction = false;
     let content = message.augmentClone(
+      // Replace @user and #channel mentions with their Discord equivalent.
+      [ /([@#]).+/, (part, type) => {
+        switch (type) {
+          case '@':
+            for (let user of this.socket._discord.users)
+              part = part.replace(`@${ user.username }`, user.mention());
+            break;
+          case '#':
+            for (let channel of this.socket._discord.channels)
+              part = part.replace(`#${ channel.name }`, channel.mention());
+            break;
+        }
+        return part;
+      } ],
       // Get dem newlines in here!
       [ Socket.NewLine, "\n" ],
       // If there's an Action identifier, format the message afterwards.
@@ -242,17 +256,10 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
       // User/channel objects should be bold.
       [ Socket.Resolveable, (part) => [ "**", part, "**" ] ],
       // If a discord user/channel is being mentioned, transform it to a proper mention.
-      [ Socket.Mention, (part) => ((part.mentionable._discordMention) ? part._discordMention : part) ]
+      [ Socket.Mention, (part) => ((part.mentionable._discordMention)
+        ? part.mentionable._discordMention : part) ]
     ).join("");
     if (isAction) content = `_${ content }_`;
-    
-    // Replace @user and #channel mentions with their Discord equivalent.
-    if (content.includes('@'))
-      for (let user of this.socket._discord.users)
-        content = content.replace(`@${ user.username }`, user.mention());
-    if (content.includes('#'))
-      for (let channel of this.socket._discord.channels)
-        content = content.replace(`#${ channel.name }`, channel.mention());
     
     let promise = this.socket._discord.sendMessage(this._discordChannel, content);
     if (!silent) promise.then((message) => this.socket._message(message, true));

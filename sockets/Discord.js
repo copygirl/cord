@@ -3,7 +3,7 @@
 let { Client } = require("discord.js");
 let Socket     = require("./Socket");
 
-let { map, filter, any, join } = require("../utility");
+let { extend } = require("../utility");
 
 
 let defaults = {
@@ -19,6 +19,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   
   constructor(cord, id, auth) {
     super(cord, id, auth);
+    auth = extend({ }, defaults, auth);
     if ((auth.token == null) && ((auth.email == null) || (auth.password == null)))
       throw new Error(`${ id }: token or email and password required`);
     
@@ -256,8 +257,9 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
       // User/channel objects should be bold.
       [ Socket.Resolveable, (part) => [ "**", part, "**" ] ],
       // If a discord user/channel is being mentioned, transform it to a proper mention.
+      // For any other mention, add more boldness!
       [ Socket.Mention, (part) => ((part.mentionable._discordMention)
-        ? part.mentionable._discordMention : part) ]
+        ? part.mentionable._discordMention : [ "**", part, "**" ]) ]
     ).join("");
     if (isAction) content = `_${ content }_`;
     

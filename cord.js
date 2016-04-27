@@ -5,7 +5,7 @@ let config = require("./config");
 
 let { EventEmitter } = require("events");
 
-let { implement, values, entries } = require("./utility");
+let { implement, Iterable: { values, entries } } = require("./utility");
 
 
 let cord = module.exports = implement(class cord {

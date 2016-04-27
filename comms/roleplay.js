@@ -1,6 +1,6 @@
 "use strict";
 
-let { range, map, sum, join } = require("../utility");
+let { Iterable } = require("../utility");
 
 
 const MAX_DICE_PER_ROLL = 20;
@@ -32,18 +32,18 @@ module.exports = {
     }
     
     // Build an iterable for each roll (1d20 1d20 1d20 => 3 rolls).
-    rolls = map(rolls, (match) => {
+    rolls = Iterable.map(rolls, (match) => {
       let [ dice, sides, offset ] = match;
       // Build an iterable for the individual dice roll results (5d20 => 5 results).
-      let results = map(range(0, dice), (i) =>
+      let results = Iterable.range(0, dice).map((i) =>
         (1 + Math.floor(Math.random() * sides)));
       // If detail mode should be applied, create an array from the results.
       if (DETAIL_ENABLE && (dice > 1) &&
           (dice <= DETAIL_MAX_DICE_PER_ROLL) &&
           (totalDice <= DETAIL_MAX_TOTAL_DICE))
-        results = Array.from(results);
+        results = results.toArray();
       // Calculate the result and average.
-      let result  = sum(results);
+      let result  = Iterable.sum(results);
       let average = result / dice;
       // Return an object containing information about the throw.
       return {
@@ -54,12 +54,12 @@ module.exports = {
     
     // Put it all together.
     let totalResult = 0;
-    let str = join(map(rolls, ({ dice, sides, offset, result, average, results }) => {
-      totalResult += result;
-      return `${ dice }d${ sides }${ (offset != 0) ? (((offset > 0) ? "+" : "") + offset) : "" }` +
-              ` = ${ result }${ results ? ` (${ results.join(", ") })` : "" }` +
-              `${ (dice > 1) ? ` ~ ${ Math.round(average * 10) / 10 }` : "" }`
-    }), " [+] ");
+    let str = rolls.map(({ dice, sides, offset, result, average, results }) => {
+        totalResult += result;
+        return `${ dice }d${ sides }${ (offset != 0) ? (((offset > 0) ? "+" : "") + offset) : "" }` +
+                ` = ${ result }${ results ? ` (${ results.join(", ") })` : "" }` +
+                `${ (dice > 1) ? ` ~ ${ Math.round(average * 10) / 10 }` : "" }`
+      }).join(" [+] ");
     return ((matches.length > 1) ? `${ str } [=] ${ totalResult }` : str);
   }
   

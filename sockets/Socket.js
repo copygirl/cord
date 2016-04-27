@@ -3,8 +3,7 @@
 let { EventEmitter } = require("events");
 
 let { isClass, implement, type,
-      UnexpectedTypeError,
-      map, prepend, join } = require("../utility");
+      Iterable, UnexpectedTypeError } = require("../utility");
 
 
 /** The Socket class defines a common interface for connections.
@@ -244,13 +243,13 @@ Socket.Message = class Message {
     if (this.target instanceof Socket.PrivateChannel)
       this.target.send(...parts);
     else if (this.sender instanceof Socket.User)
-      this.target.send(...prepend(parts, this.sender.mention, ": "));
+      this.target.send(this.sender.mention, ": ", ...parts);
   }
   
   toString(more = false) {
     let isAction = false;
-    let content = join(map(this.parts, part =>
-      ((part == Socket.Action) ? (isAction = true, "") : part)), "");
+    let content = Iterable.map(this.parts, (part) =>
+      ((part == Socket.Action) ? (isAction = true, "") : part)).join("");
     let pre = (isAction ? `* ${ this.sender }` : `<${ this.sender }>`);
     if (more) {
       let time = this.time.toISOString().substr(11, 5);

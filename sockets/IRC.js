@@ -3,7 +3,7 @@
 let { Client } = require("irc");
 let Socket     = require("./Socket");
 
-let { extend, map, join } = require("../utility");
+let { extend } = require("../utility");
 
 
 let defaults = {

@@ -2,9 +2,7 @@
 
 // TODO: Move this utility stuff to its own package.
 
-let iterable = require("./iterable");
-let reflect  = require("./reflect");
-
+let Iterable = exports.Iterable = require("./iterable");
 
 /** Returns if the specified object is an ES6 class. */
 exports.isClass = function(obj) {
@@ -14,7 +12,7 @@ exports.isClass = function(obj) {
 /** Extends the target object with all properties of the source objects. */
 let extend = exports.extend = function(target, ...sources) {
   for (let source of sources) {
-    let properties = iterable.concat(
+    let properties = Iterable.concat(
       Object.getOwnPropertyNames(source),
       Object.getOwnPropertySymbols(source));
     for (let property of properties) {
@@ -34,7 +32,7 @@ let extend = exports.extend = function(target, ...sources) {
 /** Implements the specified mixins (can be objects
  *  or classes) into the target class's prototype. */
 exports.implement = function(targetClass, ...mixins) {
-  extend(targetClass.prototype, ...iterable.map(mixins,
+  extend(targetClass.prototype, ...Iterable.map(mixins,
     // If mixin is a function, it's likely a class
     // constructor, so use its prototype instead.
     e => ((typeof e == "function") ? e.prototype : e)));
@@ -81,8 +79,9 @@ exports.UnexpectedTypeError = class UnexpectedTypeError extends Error {
 };
 
 
-// Export other module functions through this module.
-extend(exports, iterable, reflect);
+// Export reflect functions through this module.
+let reflect = require("./reflect");
+extend(exports, reflect);
 
 // Make extensions happen! This just executes the
 // extensions script, which extends existing classes.

@@ -3,9 +3,8 @@
 let Plug   = require("./Plug");
 let Socket = require("../sockets/Socket");
 
-let { extend, entries, values,
-      inspectFunction,
-      UnexpectedTypeError } = require("../utility");
+let { extend, Iterable: { entries, values, },
+      inspectFunction, UnexpectedTypeError } = require("../utility");
 
 
 let defaults = {

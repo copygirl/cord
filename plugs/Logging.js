@@ -2,7 +2,7 @@
 
 let Plug = require("./Plug");
 
-let { extend, entries } = require("../utility");
+let { extend, Iterable: { entries } } = require("../utility");
 
 
 let defaults = {

@@ -3,7 +3,7 @@
 let Plug   = require("./Plug");
 let Socket = require("../sockets/Socket");
 
-let { extend, entries, any, concat } = require("../utility");
+let { extend, Iterable: { entries } } = require("../utility");
 
 
 let defaults = {
@@ -82,8 +82,8 @@ let Bridge = module.exports = class Bridge extends Plug {
       
       let userResolves = new Set(message.sender.resolveStrings);
       
-      if (any(concat(this.config.ignore, bridge.config.ignore),
-              (e) => userResolves.has(e))) return;
+      if (Iterable.concat(this.config.ignore, bridge.config.ignore)
+            .any((e) => userResolves.has(e))) return;
       
       let parts = message.parts;
       if (!message.sender.isSelf) {

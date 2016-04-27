@@ -3,7 +3,8 @@
 let Plug   = require("./Plug");
 let Socket = require("../sockets/Socket");
 
-let { extend, Iterable: { entries } } = require("../utility");
+let { extend, Iterable } = require("../utility");
+let { entries } = Iterable;
 
 
 let defaults = {

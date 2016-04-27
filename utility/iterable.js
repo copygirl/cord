@@ -23,8 +23,9 @@ exports.entries = function*(obj, own = true) {
 };
 
 
-/** Returns an iterable that yields the value a specified number of times. */
-exports.repeat = function*(value, times) {
+/** Returns an iterable that yields the value a specified number
+ *  of times, or indefinitely if the times parameter is omitted. */
+exports.repeat = function*(value, times = Number.POSITIVE_INFINITY) {
   for (let i = 0; i < times; times++)
     yield value;
 };
@@ -158,4 +159,5 @@ exports.min = (iterable) => aggregate(iterable, (a, b) => ((b < a) ? b : a));
 
 /** Returns a string of all elements in the iterable
  *  joined together seperated by the specified string. */
-exports.join = (iterable, seperator = ", ") => ("" + aggregate(iterable, (a, b) => `${ a }${ seperator }${ b }`));
+exports.join = (iterable, seperator = ", ") =>
+  ("" + aggregate(iterable, (a, b) => `${ a }${ seperator }${ b }`));

@@ -17,10 +17,10 @@ let cord = module.exports = implement(class cord {
     this.plugs   = { };
   }
   
-  // on("connected",    (socket, self) => ...)
+  // on("connected",    (socket, self)   => ...)
   // on("disconnected", (socket, reason) => ...)
   
-  // on("newUser",    (user) => ...)
+  // on("newUser",    (user)    => ...)
   // on("newChannel", (channel) => ...)
   
   // on("message", (message) => ...)

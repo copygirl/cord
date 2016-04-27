@@ -1,6 +1,7 @@
 "use strict";
 
-let { Action, User, Channel } = require("../sockets/Socket");
+let Socket = require("../sockets/Socket");
+let { Action, User, Channel } = Socket;
 
 
 module.exports = {
@@ -24,14 +25,14 @@ module.exports = {
   
   testParameters: (a, b, c) => `Parameter response: '${ a }', '${ b }' and '${ c }'`,
   
-  testTypes: (a = Number, b = User) => `${ a } is a number and ${ b.mention } is a user. Hi!`,
+  testTypes: (a=Number, b=User) => `${ a } is a number and ${ b.mention } is a user. Hi!`,
   
   testArgs: (...args) => `Varargs response: ${ args.length } element` +
                          `${ (args.length != 1) ? "s" : "" }. Random: ${ args.random() }`,
   
   testConfig: (config) => JSON.stringify(config),
   
-  testAll: (target, sender, a, b = Channel, ...args) => {
+  testAll: (target, sender, a, b=Channel, ...args) => {
     target.send(`In ${ target }, ${ sender } said ${ a } ` +
                 `and ${ b } and also ${ args.join(", ") }.`); },
   

@@ -291,13 +291,13 @@ Socket.NewLine = { toString() { return " "; } };
  *  resolve strings for quick lookup. */
 Socket.Resolver = class Resolver {
   
-  constructor(service) {
-    this.service = service;
+  constructor(socket) {
+    this.socket = socket;
     
     this._resolveCache = new Map();
     
-    service.on("newUser",    (user)    => this._new(user));
-    service.on("newChannel", (channel) => this._new(channel));
+    socket.on("newUser",    (user)    => this._new(user));
+    socket.on("newChannel", (channel) => this._new(channel));
   }
   
   

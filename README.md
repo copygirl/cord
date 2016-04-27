@@ -13,6 +13,7 @@ One of cord's strengths is its modularity:
 - **Sockets** provide a common interface for dealing with different services.
 - **Plugs** is just our obviously *brilliant* way of saying "plugins".
   I *know* you like it!
+- **Comms** is what we call our commands. Yeah, we were running out of ideas.
 
 The common interface makes it easy to write a plug that works for all sockets.
 As an example, the [Bridge](https://github.com/copygirl/cord/blob/master/plugs/Bridge.js)
@@ -30,12 +31,12 @@ name. Alternatively, a socket's message sending implementation can turn the
 object into something better looking or appropriate for that socket:
 Formatting, mentions, actions, newlines, ...
 
-### Plugins
+### Plugs
 
 - **Logging**: Currently only logs messages to the console.
 - **Respawn**: Automatically reconnects sockets because shit happens.
 - **Bridge**: Relays messages between linked channels.
-- **React**: Adds and responds to commands (basic and regex).
+- **React**: Adds and responds to commands ("comms"), basic and regex based.
 
 ## Installation
 

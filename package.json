@@ -9,6 +9,6 @@
     "irc": "^0.5.0"
   },
   "scripts": {
-    "start": "node --harmony_default_parameters --harmony_destructuring --harmony_rest_parameters cord.js"
+    "start": "node cord.js"
   }
 }

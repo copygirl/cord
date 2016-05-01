@@ -280,7 +280,7 @@ Socket.Attachment = class Attachment {
     this.filename = filename;
   }
   
-  toString() { return `["${ this.filename }" ${ this.url } ]`; }
+  toString() { return this.url; }
   
 };
 

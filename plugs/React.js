@@ -17,6 +17,14 @@ let commDefaults = {
 };
 
 
+let commArgsRegex = /([^\s'"]+(['"])([^\2]*?)\2)|[^\s'"]+|(['"])([^\4]*?)\4/g;
+let getCommArgs = function(str) {
+  let match, args = [ ];
+  while (match = commArgsRegex.exec(str))
+    args.push(match[1] || match[5] || match[0]);
+  return args;
+}
+
 let findResolveable = function(msg, v, restrict) {
   let split = v.split(':', 2);
   if (split.length == 2) {
@@ -202,7 +210,7 @@ module.exports = class React extends Plug {
         if (comm == null) return message.reply(`Unknown command '${ command }'.`);
         
         content  = content.slice(this.config.prefix.length + command.length + 1);
-        let args = content.match(/"(?:\\"|\\\\|[^"])*"|\S+/g) || [ ];
+        let args = getCommArgs(content);
         
         return comm(message, content, args);
       }

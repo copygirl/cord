@@ -83,6 +83,9 @@ let Iterable = module.exports = class Iterable {
    *  default value if none matched / the Iterable was empty. */
   last(test, defaultValue) { return Iterable.last(this, test, defaultValue); }
   
+  /** Applies an aggregate function over all elements of the Iterable, returning
+   *  the result. Supplying an initial value is optional. Without it, the first
+   *  element is used, and if the Iterable is empty, undefined is returned. */
   aggregate(value, func) { return Iterable.aggregate(this, value, func); }
   /** Returns the sum of all elements in the iterable. */
   sum() { return Iterable.sum(this); }
@@ -190,9 +193,9 @@ let Iterable = module.exports = class Iterable {
   
   // ========== AGGREGATE AND RELATED FUNCTIONS ==========
   
-  /** Applies an aggregate function over all elements of the iterable, returning
+  /** Applies an aggregate function over all elements of the Iterable, returning
    *  the result. Supplying an initial value is optional. Without it, the first
-   *  element is used, and if the iterable is empty, undefined is returned. */
+   *  element is used, and if the Iterable is empty, undefined is returned. */
   static aggregate(iterable, value, func) {
     let skip = false;
     if (func === undefined)

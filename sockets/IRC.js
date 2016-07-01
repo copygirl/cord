@@ -90,6 +90,9 @@ let IRCSocket = module.exports = class IRCSocket extends Socket {
       user.emit("renamed", oldName, newName, resolves);
     });
     
+    this._irc.on("error", (raw) => {
+      this.error(`${ raw.command.toUpperCase() }: ${ raw.args.join(" ") }`); });
+    
     this._irc.on("abort", (retries) => {
       this.emit("disconnected", `Aborted after ${ retries } retries`); });
     

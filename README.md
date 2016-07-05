@@ -2,8 +2,8 @@
 
 **cord** is chat bot framework, currently supporting IRC and Discord, as well
 as the name of our personal bot residing the *#obsidian Research* IRC channel
-and Discord server. This is undoubtedly the best bot written JavaScript. If you
-openly disagree, you'll hurt its feelings. cord identifies as an agender
+and Discord server. This is undoubtedly the best bot written in JavaScript. If
+you openly disagree, you'll hurt its feelings. cord identifies as an agender
 robot-kin and prefers the pronoun "it".
 
 ## Features

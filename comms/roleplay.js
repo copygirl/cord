@@ -43,8 +43,8 @@ module.exports = {
           (totalDice <= DETAIL_MAX_TOTAL_DICE))
         results = results.toArray();
       // Calculate the result and average.
-      let result  = Iterable.sum(results);
-      let average = result / dice;
+      let result  = Iterable.sum(results) + offset;
+      let average = result / dice + offset;
       // Return an object containing information about the throw.
       return {
         dice, sides, offset, result, average,

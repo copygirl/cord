@@ -16,13 +16,13 @@ const DETAIL_MAX_TOTAL_DICE = 16;
 
 module.exports = {
   
-  [/\b(\d+)?d(\d+)([+-]\d+)?\b/g]: (...matches) => {
+  [/\b(\d+)d(\d+)([+-]\d+)?\b/g]: (...matches) => {
     if (matches.length > MAX_DICE_ROLLS_PER_MESSAGE) return;
     // Prepare and validate some stuff.
     let rolls = [ ];
     let totalDice = 0;
     for (let match of matches) {
-      let dice   = ((match[1] != null) ? Number(match[1]) : 1);
+      let dice   = Number(match[1]);
       let sides  = Number(match[2]);
       let offset = ((match[3] != null) ? Number(match[3]) : 0);
       if (isNaN(dice) || isNaN(sides) || isNaN(offset) ||

@@ -45,7 +45,7 @@ module.exports = {
     
     // Calculate each roll (1d20 1d20 1d20 => 3 rolls).
     for (let roll of rolls) {
-      let { dice, sides, drop, min, diceOffset, totalOffset } = roll;
+      let { dice, sides, drop, min, max, diceOffset, totalOffset } = roll;
       
       roll.detail = (DETAIL_ENABLE && (dice > 1) &&
                      (dice <= DETAIL_MAX_DICE_PER_ROLL) &&

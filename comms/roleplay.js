@@ -16,49 +16,62 @@ const DETAIL_MAX_TOTAL_DICE = 16;
 
 module.exports = {
   
-  [/\b(\d+)d(\d+)([+-]\d+)?\b/g]: (...matches) => {
+  [/\b(\d+)d(\d+)(?:([v><])(\d+))?(( )?[+-]\6?\d+)?\b/g]: (...matches) => {
     if (matches.length > MAX_DICE_ROLLS_PER_MESSAGE) return;
+    
     // Prepare and validate some stuff.
     let rolls = [ ];
     let totalDice = 0;
     for (let match of matches) {
-      let dice   = Number(match[1]);
-      let sides  = Number(match[2]);
-      let offset = ((match[3] != null) ? Number(match[3]) : 0);
-      if (isNaN(dice) || isNaN(sides) || isNaN(offset) ||
+      let dice  = Number(match[1]);
+      let sides = Number(match[2]);
+      let drop  = ((match[3] === "v") ? Number(match[4]) : 0);
+      let min   = ((match[3] === ">") ? Number(match[4]) : null);
+      let max   = ((match[3] === "<") ? Number(match[4]) : null);
+      let diceOffset  = (((match[5] != null) && (match[6] == null)) ? Number(match[5]) : 0);
+      let totalOffset = ((match[6] != null) ? Number(match[5].replace(" ", "")) : 0);
+      
+      if (![ drop, diceOffset, totalOffset ].some(Number.isSafeInteger) ||
+          (drop >= dice) || (min >= sides + diceOffset) ||
           (dice > MAX_DICE_PER_ROLL) || (sides > MAX_SIDES_ON_DIE)) return;
+      
       totalDice += ((dice <= 8) ? dice : 1);
-      rolls.push([ dice, sides, offset ]);
+      rolls.push({
+        match: match[0],
+        dice, sides, drop, min, max,
+        diceOffset, totalOffset
+      });
     }
     
-    // Build an iterable for each roll (1d20 1d20 1d20 => 3 rolls).
-    rolls = Iterable.map(rolls, (match) => {
-      let [ dice, sides, offset ] = match;
-      // Build an iterable for the individual dice roll results (5d20 => 5 results).
-      let results = Iterable.range(0, dice).map((i) =>
-        (1 + Math.floor(Math.random() * sides)));
-      // If detail mode should be applied, create an array from the results.
-      if (DETAIL_ENABLE && (dice > 1) &&
-          (dice <= DETAIL_MAX_DICE_PER_ROLL) &&
-          (totalDice <= DETAIL_MAX_TOTAL_DICE))
-        results = results.toArray();
+    // Calculate each roll (1d20 1d20 1d20 => 3 rolls).
+    for (let roll of rolls) {
+      let { dice, sides, drop, min, diceOffset, totalOffset } = roll;
+      
+      roll.detail = (DETAIL_ENABLE && (dice > 1) &&
+                     (dice <= DETAIL_MAX_DICE_PER_ROLL) &&
+                     (totalDice <= DETAIL_MAX_TOTAL_DICE))
+      
+      // Build an array of the individual dice roll results (5d20 => 5 results).
+      let results = roll.diceRolls = Iterable.range(0, dice)
+        .map((i) => (1 + Math.floor(Math.random() * sides) + diceOffset))
+        .toArray();
+      
+      // Modify dice roll requirements affecting the result of the roll (but not roll.diceRolls).
+      if (drop > 0) { results = results.slice().sort((a, b) => (a - b)); results.splice(0, drop); }
+      if (min != null) results = results.filter((result) => (result > min));
+      if (max != null) results = results.filter((result) => (result < min));
+      
       // Calculate the result and average.
-      let result  = Iterable.sum(results) + offset;
-      let average = result / dice + offset;
-      // Return an object containing information about the throw.
-      return {
-        dice, sides, offset, result, average,
-        results: ((results instanceof Array) ? results : null)
-      };
-    });
+      roll.result = Iterable.sum(results) + totalOffset;
+      if (results.length > 1) roll.average = roll.result / results.length + totalOffset;
+    };
     
-    // Put it all together.
+    // Put the response together.
     let totalResult = 0;
-    let str = rolls.map(({ dice, sides, offset, result, average, results }) => {
+    let str = rolls.map(({ match, detail, diceRolls, result, average }) => {
         totalResult += result;
-        return `${ dice }d${ sides }${ (offset != 0) ? (((offset > 0) ? "+" : "") + offset) : "" }` +
-                ` = ${ result }${ results ? ` (${ results.join(", ") })` : "" }` +
-                `${ (dice > 1) ? ` ~ ${ Math.round(average * 10) / 10 }` : "" }`
+        return `${ match } = ${ result }${ detail ? ` (${ diceRolls.join(", ") })` : "" }` +
+                `${ average ? ` ~ ${ Math.round(average * 10) / 10 }` : "" }`
       }).join(" [+] ");
     return ((matches.length > 1) ? `${ str } [=] ${ totalResult }` : str);
   }

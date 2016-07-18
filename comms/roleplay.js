@@ -29,7 +29,7 @@ module.exports = {
       let min   = ((match[3] === ">") ? Number(match[4]) : null);
       let max   = ((match[3] === "<") ? Number(match[4]) : null);
       let diceOffset  = (((match[5] != null) && (match[6] == null)) ? Number(match[5]) : 0);
-      let totalOffset = ((match[6] != null) ? Number(match[5].replace(" ", "")) : 0);
+      let totalOffset = ((match[6] != null) ? Number(match[5].replace(/ /g, "")) : 0);
       
       if (![ drop, diceOffset, totalOffset ].some(Number.isSafeInteger) ||
           (drop >= dice) || (min >= sides + diceOffset) ||

@@ -59,7 +59,7 @@ module.exports = {
       // Modify dice roll requirements affecting the result of the roll (but not roll.diceRolls).
       if (drop > 0) { results = results.slice().sort((a, b) => (a - b)); results.splice(0, drop); }
       if (min != null) results = results.filter((result) => (result > min));
-      if (max != null) results = results.filter((result) => (result < min));
+      if (max != null) results = results.filter((result) => (result < max));
       
       // Calculate the result and average.
       roll.result = Iterable.sum(results) + totalOffset;

@@ -154,13 +154,13 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
           if (nickname != null)
             thing = Object.create(thing, { _name: { value: nickname } });
         }
-            
+        
         return ((thing != null) ? thing.mention : null);
       })
       // Turn newlines into the Socket equivalent.
       .augment(/\n/, Socket.NewLine);
     
-    for (let attachment of discordMsg.attachments)
+    for (let [id, attachment] of discordMsg.attachments)
       message.parts.push(" ", new Socket.Attachment(attachment.filename, attachment.url));
     
     // TODO: Parse markdown formatting of messages.

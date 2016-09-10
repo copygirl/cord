@@ -50,7 +50,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
       this._users.delete(user._id);
       user.emit("removed");
     });
-    this._discord.on("guildMemberUpdate", (guild, oldMember, newMember) => {
+    this._discord.on("presenceUpdate", (oldMember, newMember) => {
       let user = this._getUser(newMember);
       if (oldMember.name != newMember.name) {
         let resolves = user.resolveStrings;

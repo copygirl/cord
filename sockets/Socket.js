@@ -172,9 +172,12 @@ Socket.Message = class Message {
         let end   = start + result[0].length;
         if (start > 0) replace.unshift(part.slice(0, start));
         if (end < part.length) replace.push(part.slice(end));
-        // If there's more text to the right of
-        // the match, we want to check that too.
-        return ((end < part.length) ? 1 : 0);
+        
+        let recheck = 0;
+        // Recheck any additional strings at the end of the array.
+        for (var i = replace.length - 1; (i > 0) && (typeof replace[i] == "string"); i++)
+          recheck++;
+        return recheck;
       };
     // If the test parameter is a class, do an instanceof test.
     // For example: Socket.User, (user) => [ "(", user.rank, ")", "<", user, ">" ]
@@ -196,18 +199,16 @@ Socket.Message = class Message {
       else if (!(result instanceof Array)) result = [ result ];
       
       let replace = ((action instanceof Function) ? action(...result) : action);
-      if (replace === false) continue;
-      else if (replace == null) replace = [ ];
+      if (replace === false) {
+        if ((test instanceof RegExp) && test.global) i--;
+        continue;
+      } else if (replace == null) replace = [ ];
       else if (!(replace instanceof Array)) replace = [ replace ];
+      if ((test instanceof RegExp) && test.global) test.lastIndex = 0;
       
-      let recheckAmount = 0;
-      if (after != null) {
-        recheckAmount = after(part, result, replace);
-        recheckAmount = Math.min(recheckAmount, replace.length);
-      }
-      
+      let recheck = ((after != null) ? after(part, result, replace) : 0);
       parts.splice(i, 1, ...replace);
-      i += replace.length - 1 - recheckAmount;
+      i += replace.length - 1 - recheck;
     }
     
     return parts;

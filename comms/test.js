@@ -43,6 +43,6 @@ module.exports = {
   [/match/g]: (...matches) => `There ${ (matches.length != 1) ? "were" : "was" } ` +
                            `${ matches.length } match${ (matches.length != 1) ? "es" : "" }.`,
   
-  [/^(\d+) \+ (\d+) =$/]: (match, a = Number, b = Number) => `${ match } ${ a + b }`
+  [/^(\d+) \+ (\d+) =$/]: (match, a=Number, b=Number) => `${ match } ${ a + b }`
   
 };

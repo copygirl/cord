@@ -161,8 +161,8 @@ module.exports = class React extends Plug {
               case "message": origArgs.push(message); break;
               case "target": origArgs.push(message.target); break;
               case "sender": origArgs.push(message.sender); break;
-              case "content": origArgs.push(content); break;
               case "config": origArgs.push(commConfig); break;
+              case "content": origArgs.push(content); break;
               
               case "args": origArgs.push(...args); break;
               

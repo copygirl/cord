@@ -35,48 +35,48 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
       this.emit("connected", this._getUser(this._discord.user, true));
       
       // Create user and channel objects.
-      for (let user of this._discord.users)
-        this._getUser(user, true);
-      for (let channel of this._discord.channels)
-        this._getChannel(channel, true);
+      for (let [id, user] of this._discord.users)
+        this._getUser(id, true);
+      for (let [id, channel] of this._discord.channels)
+        this._getChannel(id, true);
     });
     
     // User events.
-    this._discord.on("serverNewMember", (server, user) =>
+    this._discord.on("guildMemberAdd", (guild, user) =>
       this._getUser(user, true));
-    this._discord.on("serverMemberRemoved", (server, user) => {
-      if (this._discord.users.has("id", user.id)) return;
+    this._discord.on("guildMemberRemove", (guild, user) => {
+      if (this._discord.users.exists("id", user.id)) return;
       user = this._getUser(user);
       this._users.delete(user._id);
       user.emit("removed");
     });
-    this._discord.on("presence", (oldUser, newUser) => {
-      let user = this._getUser(newUser);
-      if (oldUser.name != newUser.name) {
+    this._discord.on("guildMemberUpdate", (guild, oldMember, newMember) => {
+      let user = this._getUser(newMember);
+      if (oldMember.name != newMember.name) {
         let resolves = user.resolveStrings;
-        user._name = newUser.name;
-        user.emit("renamed", oldUser.name, newUser.name, resolves);
+        user._name = newMember.name;
+        user.emit("renamed", oldMember.name, newMember.name, resolves);
       }
     });
     
     // Channel events.
-    this._discord.on("channelCreated", (channel) =>
+    this._discord.on("channelCreate", (channel) =>
       this._getChannel(channel, true));
-    this._discord.on("channelDeleted", (channel) => {
+    this._discord.on("channelDeletd", (channel) => {
       channel = this._getChannel(channel);
       this._channels.delete(channel._id);
       channel.emit("removed");
     });
-    this._discord.on("channelUpdated", (oldChannel, newChannel) => {
+    this._discord.on("channelUpdate", (oldChannel, newChannel) => {
       let channel = this._getChannel(newChannel);
-      if (oldChannel.name != newChannel.name) {
+      if ((channel != null) && (oldChannel.name != newChannel.name)) {
         let resolves = channel.resolveStrings;
         channel._name = newChannel.name;
         channel.emit("renamed", oldChannel.name, newChannel.name, resolves);
       }
     });
     
-    // TODO: Handle joining / leaving servers.
+    // TODO: Handle joining / leaving guilds.
     
     this._discord.on("message", (msg) => this._message(msg));
     
@@ -100,7 +100,8 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     if (typeof id != "string") id = id.id;
     let user = this._users.get(id);
     if ((user == null) && create) {
-      this._users.set(id, (user = new DiscordSocket.User(this, id)));
+      user = new DiscordSocket.User(this, id);
+      this._users.set(id, user);
       this.emit("newUser", user);
     }
     return user;
@@ -110,7 +111,11 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     if (typeof id != "string") id = id.id;
     let channel = this._channels.get(id);
     if ((channel == null) && create) {
-      this._channels.set(id, (channel = new DiscordSocket.Channel(this, id)));
+      channel = new DiscordSocket.Channel(this, id);
+      // Currently doesn't support non-text channels.
+      // So, no DM or group DM channels :(
+      if (channel._discordChannel.type != "text") return null;
+      this._channels.set(id, channel);
       this.emit("newChannel", channel);
     }
     return channel;
@@ -127,13 +132,29 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     let target = this._getChannel(discordMsg.channel, true);
     let parts  = [ discordMsg.content ];
     
+    // If no channel could be created, which for example happens
+    // for PM channels, get out now before it's too late!
+    if (target == null) return;
+    
+    // Let's just use a dirty hack to get it to use the nickname instead of the username.
+    if (discordMsg.member.nickname != null)
+      sender = Object.create(sender, { _name: { value: discordMsg.member.nickname } });
+    
     let message = new Socket.Message(this, time, target, sender, parts)
       // Turn action-like messages into Socket.Action messages.
       .augment(/^_([^_]*)_$/, (_, text) => [ Socket.Action, text ])
       // Turn discord mentions into their Socket equivalents.
-      .augment(/<(#|@)(\d{17,18})>/, (_, type, id) => {
+      .augment(/<(#|@!?)(\d{17,18})>/, (_, type, id) => {
         let lookup = ((type == '#') ? "_getChannel" : "_getUser");
         let thing = this[lookup](id);
+        
+        // Same as above: Dirty hacky nickname powers activate!
+        if (thing instanceof DiscordSocket.User) {
+          let nickname = discordMsg.guild.members.find("id", id).nickname;
+          if (nickname != null)
+            thing = Object.create(thing, { _name: { value: nickname } });
+        }
+            
         return ((thing != null) ? thing.mention : null);
       })
       // Turn newlines into the Socket equivalent.
@@ -172,7 +193,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   
   connect() {
     return ((this.token != null)
-      ? this._discord.loginWithToken(this.token, this.email, this.password)
+      ? this._discord.login(this.token)
       : this._discord.login(this.email, this.password));
   }
   
@@ -182,7 +203,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   
   type(resolveStr) {
     // TODO: Allow resolving @username for mentions.
-    let result = /^(?:(?:(\d{17,18})\/)?#([^\d].+)|#(\d{17,18})|@(\d{17,18}))$/.exec(resolveStr);
+    let result = /^(?:(?:(\d{17,18})\/)?#([^\d].+)|#(\d{17,18})|@!?(\d{17,18}))$/.exec(resolveStr);
     return ((result != null) ? ((result[4] != null) ? "user" : "channel")
                              : null);
   }
@@ -199,7 +220,7 @@ DiscordSocket.User = class DiscordUser extends Socket.User {
     this._name = this._discordUser.username;
   }
   
-  get _discordUser() { return this.socket._discord.users.get("id", this._id); }
+  get _discordUser() { return this.socket._discord.users.find("id", this._id); }
   get _discordMention() { return `<@${ this._id }>`; }
   
   get name() { return this._name; }
@@ -216,12 +237,12 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
     this._name = this._discordChannel.name;
   }
   
-  get _discordChannel() { return this.socket._discord.channels.get("id", this._id); }
+  get _discordChannel() { return this.socket._discord.channels.find("id", this._id); }
   get _discordMention() { return `<#${ this._id }>`; }
   
   get name() { return `#${ this._name }`; }
   get resolveStrings() { return [ `#${ this._id }`, `#${ this._name }`,
-                                  `${ this._discordChannel.server.id }/#${ this._name }` ]; }
+                                  `${ this._discordChannel.guild.id }/#${ this._name }` ]; }
   get topic() { return (this._discordChannel.topic || null); }
   
   send(...parts) { this._send(parts, false); }
@@ -238,18 +259,26 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
     let isAction = false;
     let content = message.augmentClone(
       // Replace @user and #channel mentions with their Discord equivalent.
-      [ /([@#]).+/, (part, type) => {
+      [ /([@#]).+/g, (part, type) => {
         switch (type) {
           case '@':
-            for (let user of this.socket._discord.users)
-              part = part.replace(`@${ user.username }`, user.mention());
+            for (let [id, member] of this._discordChannel.guild.members) {
+              let match = `@${ member.nickname || member.user.username }`;
+              if (part.slice(0, match.length) != match) continue;
+              let mention = new Socket.Mention(this.socket._getUser(id), message);
+              return [ mention, part.slice(match.length) ];
+            }
             break;
           case '#':
-            for (let channel of this.socket._discord.channels)
-              part = part.replace(`#${ channel.name }`, channel.mention());
+            for (let channel of this.socket.channels) {
+              let match = channel.name;
+              if (part.slice(0, match.length) != match) continue;
+              let mention = new Socket.Mention(channel, message);
+              return [ mention, part.slice(match.length) ];
+            }
             break;
         }
-        return part;
+        return false;
       } ],
       // Get dem newlines in here!
       [ Socket.NewLine, "\n" ],
@@ -259,12 +288,12 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
       [ Socket.Resolveable, (part) => [ "**", part, "**" ] ],
       // If a discord user/channel is being mentioned, transform it to a proper mention.
       // For any other mention, add more boldness!
-      [ Socket.Mention, (part) => ((part.mentionable._discordMention)
+      [ Socket.Mention, (part) => (("_discordMention" in part.mentionable)
         ? part.mentionable._discordMention : [ "**", part, "**" ]) ]
     ).join("");
     if (isAction) content = `_${ content }_`;
     
-    let promise = this.socket._discord.sendMessage(this._discordChannel, content);
+    let promise = this._discordChannel.sendMessage(content);
     if (!silent) promise.then((message) => this.socket._message(message, true));
     // TODO: Do something about failed messages?
   }

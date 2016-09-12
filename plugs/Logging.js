@@ -36,7 +36,8 @@ module.exports = class Logging extends Plug {
   }
   
   log(level, source, ...args) {
-    console[(level == "error") ? "error" : "log"](
+    let func = ((level == "error") ? "error" : "log");
+    console[func](
       this.config.format.general
         .replace("$time", (new Date()).toISOString().substr(11, 5))
         .replace("$source", this.nameMap.get(source) || source.constructor.name)

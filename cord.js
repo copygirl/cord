@@ -38,6 +38,7 @@ let cord = module.exports = implement(class cord {
   }
   
   log(level, source, ...args) {
+    let func = ((level == "error") ? "error" : "log");
     console[func](`[${ level }|${ source }]`, args);
   }
   

@@ -20,7 +20,7 @@ module.exports = {
     name: "roll",
     help: "Roll some dice, for example '1d20+5' or '6d20>10'!",
     usage: "<dice>d<sides>[>/<limit][+/-offset] <...>",
-    command: (...matches) => {
+    action: (...matches) => {
       if (matches.length > MAX_DICE_ROLLS_PER_MESSAGE) return;
       
       // Prepare and validate some stuff.

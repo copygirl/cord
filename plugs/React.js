@@ -3,14 +3,15 @@
 let Plug   = require("./Plug");
 let Socket = require("../sockets/Socket");
 
-let { extend, Iterable: { entries, values, },
+let { extend, Iterable: { entries, values, map, filter },
       inspectFunction, UnexpectedTypeError } = require("../utility");
 
 
 let defaults = {
-  prefix: "~",          // Prefix used for regular commands, such as "~help".
-  comms: { },           // Additional configuration for commands.
-  replyOnUnknown: true, // Whether to reply when an unknown command is used. 
+  prefix: "~",             // Prefix used for regular commands, such as "~help".
+  comms: { },              // Additional configuration for commands.
+  replyOnUnknown: true,    // Whether to reply when an unknown command is used. 
+  showRegexAsUsage: false, // Whether to show raw regexes as the usage text by default.
 };
 
 let commDefaults = {
@@ -62,41 +63,65 @@ for (let [ name, func ] of entries(transforms))
     transforms[name.slice(7)] = func;
 
 
-module.exports = class React extends Plug {
+let React = module.exports = class React extends Plug {
   
   constructor(cord, config) {
     super(cord, extend({ }, defaults, config));
     
     this.commands = { };
     this.regexes  = [ ];
+    this.lookup   = { };
+    
+    // Hold onto aliases comms until all others are processed.
+    let aliases = [ ];
     
     for (let [ name, commConfig ] of entries(this.config.comms)) {
       if (commConfig.enabled === false) continue;
       commConfig = extend({ }, commDefaults, commConfig);
       let comms = require(`../comms/${ name }`);
       
-      for (let [ comm, action ] of entries(comms)) {
-        let regex = /\/(.+)\/(g)?/.exec(comm);
-        if (regex != null) comm = new RegExp(regex[1], regex[2]);
+      for (let [ trigger, comm ] of entries(comms)) {
+        let regexTest = /\/(.+)\/(g)?/.exec(trigger);
+        if (regexTest != null) trigger = new RegExp(regexTest[1], regexTest[2]);
         
-        let origAction = action;
-        if (typeof action == "string")    action = () => origAction;
-        else if (action instanceof Array) action = () => origAction.random();
+        comm = extend({
+          category: name, name: ((typeof trigger == "string") ? trigger : null),
+          trigger, regex: (trigger instanceof RegExp),
+          help: null, usage: null, alias: false,
+        }, (((comm.action != null) || (comm.alias != null)) ? comm : { action: comm }));
         
-        if (!(action instanceof Function))
-          throw new UnexpectedTypeError(action, String, Array, Function);
+        // Skip aliases commands for now.
+        if (typeof comm.alias == "string") { aliases.push(comm); continue; }
         
-        let inspect = inspectFunction(action);
-        let numParams = 0; // Number of parameters / minimum arguments.
+        let origAction = comm.action;
+        if (typeof comm.action == "string")    comm.action = () => origAction;
+        else if (comm.action instanceof Array) comm.action = () => origAction.random();
+        if (!(comm.action instanceof Function))
+          throw new UnexpectedTypeError(comm, String, Array, Function);
+        
+        let inspect = inspectFunction(comm.action);
+        let minParams = 0, maxParams = 0;
         for (let param of inspect.parameters) {
           
           let invalidParameterError = () => new Error(
-            `Invalid parameter '${ param.name }' for comm '${ comm }':\n${ action }`);
+            `Invalid parameter '${ param.name }' for comm '${ trigger }':\n${ comm.action }`);
           let invalidDefaultValueError = () => new Error(
-            `Invalid type on parameter '${ param.name }' in comm '${ comm }':\n${ action }`);
+            `Invalid type on parameter '${ param.name }' in comm '${ trigger }':\n${ comm.action }`);
           let invalidSpreadOperatorError = (needed = false) => new Error(
             `${ needed ? "Missing" : "Invalid" } spread operator on parameter ` +
-            `'${ param.name }' in comm '${ comm }':\n${ action }`);
+            `'${ param.name }' in comm '${ trigger }':\n${ comm.action }`);
+          
+          // null, number and string default parameters are treated as such.
+          // Arrays (like "[Channel]") are optional parameters of that type.
+          let def = param.defaultValue;
+          if ((def != null) && ((def == "null") || !isNaN(def) ||
+                                (def[0] == '"') || (def[0] == '['))) {
+            param.optional = true;
+            param.defaultValue = (!isNaN(def) ? "Number"
+              : ((def[0] == '[') && (def.length > 2)) ? def.substr(1, def.length - 2)
+              : null);
+            param.optionalIsArray = (def[0] == '[');
+          } else param.optional = false;
           
           switch (param.name) {
             case "cord":
@@ -106,54 +131,73 @@ module.exports = class React extends Plug {
             case "config":
               if (param.spread) throw invalidSpreadOperatorError();
               if (param.defaultValue) throw invalidDefaultValueError();
+              param.hide = true;
               break;
             case "content":
               if (param.spread) throw invalidSpreadOperatorError();
               if (param.defaultValue) throw invalidDefaultValueError();
-              if (numParams > 0) throw invalidParameterError();
-              numParams = null;
-              break;
-            
-            case "args":
-              if (comm instanceof RegExp) throw invalidParameterError();
-              if (!param.spread) throw invalidSpreadOperatorError(true);
-              if (param.defaultValue) throw invalidDefaultValueError();
+              if (minParams > 0) throw invalidParameterError();
+              maxParams = Number.POSITIVE_INFINITY;
               break;
             
             case "match":
-              if (!(comm instanceof RegExp) || comm.global) throw invalidParameterError();
+              if (!comm.regex || trigger.global) throw invalidParameterError();
               if (param.spread) throw invalidSpreadOperatorError();
               if (param.defaultValue) throw invalidDefaultValueError();
-              if (numParams > 0) throw new Error(
-                `Parameter '${ param.name }' for comm '${ comm }' ` +
-                `must before group parameters:\n${ action }`);
+              if (minParams > 0) throw new Error(
+                `Parameter '${ param.name }' for comm '${ trigger }' ` +
+                `must before group parameters:\n${ comm.action }`);
               break;
             case "matches":
-              if (!(comm instanceof RegExp) || !comm.global) throw invalidParameterError();
+              if (!comm.regex || !trigger.global) throw invalidParameterError();
               if (!param.spread) throw invalidSpreadOperatorError(true);
               if (param.defaultValue) throw invalidDefaultValueError();
               break;
             
             default:
-              if ((comm instanceof RegExp) && comm.global) throw invalidParameterError();
-              if (param.spread) throw invalidSpreadOperatorError();
-              if (numParams == null) throw invalidParameterError();
-              numParams++;
+              if (param.spread) {
+                if (comm.regex) throw invalidParameterError();
+                if (param.defaultValue) throw invalidDefaultValueError();
+                maxParams = Number.POSITIVE_INFINITY;
+              } else {
+                if (comm.regex && trigger.global) throw invalidParameterError();
+                if (param.spread) throw invalidSpreadOperatorError();
+                if (!Number.isFinite(maxParams)) throw invalidParameterError();
+                if (!param.optional) minParams++;
+                maxParams++;
+              }
               break;
           }
           
           if (transforms[param.defaultValue || "None"] == null) throw new Error(
             `Unknown transform '${ param.defaultValue }' on parameter ` +
-            `'${ param.name }' in comm '${ comm }':\n${ action }`);
+            `'${ param.name }' in comm '${ trigger }':\n${ comm.action }`);
           
         }
         
+        if (!comm.regex) {
+          // Automatic usage generation.
+          let visibleParams = inspect.parameters.filter((param) => !param.hide);
+          if ((comm.usage == null) && (visibleParams.length > 0))
+            comm.usage = map(visibleParams, (param) => {
+                let name = param.name;
+                if (param.spread) name = `[${ name }...]`;
+                else if (param.optional) name = `[${ name }]`;
+                else name = `<${ name }>`;
+                return name;
+              }).join(" ");
+          // Prefix non-regex comms' usage with "~name ".
+          comm.usage = `${ config.prefix }${ comm.trigger }` +
+                        `${ ((comm.usage != null) && (comm.usage.length > 0)) ? ` ${ comm.usage }` : "" }`;
+        }
+        
         // TODO: Catch and handle errors.
-        let commAction = (message, content, args) => {
-          if (!(comm instanceof RegExp) && (numParams != null) && ((args.length < numParams) ||
-              (!inspect.spread && (args.length > numParams)))) return message.reply(
-            `${ comm }: Expected ${ numParams }${ inspect.spread ? "+" : "" } ` +
-            `argument${ (numParams != 1) ? "s" : "" }, but got ${ args.length }.`);
+        comm.use = (message, content, args) => {
+          if (!comm.regex && ((args.length < minParams) || (args.length > maxParams)))
+            return message.reply(
+              `${ comm.name }: Expected ${ minParams }${ ((maxParams != minParams) ?
+                (Number.isFinite(maxParams) ? ` to ${ maxParams }` : " or more") : "") } ` +
+              `argument${ ((minParams | maxParams) != 1) ? "s" : "" }, but got ${ args.length }.`);
           
           let origArgs = [ ];
           for (let param of inspect.parameters)
@@ -165,35 +209,55 @@ module.exports = class React extends Plug {
               case "config": origArgs.push(commConfig); break;
               case "content": origArgs.push(content); break;
               
-              case "args": origArgs.push(...args); break;
-              
               case "match": origArgs.push(args.shift()); break;
               case "matches": origArgs.push(...args); break;
               
               default:
+                if (param.spread) {
+                  // TODO: Somehow allow transforming varargs.
+                  origArgs.push(...args);
+                } else {
                 let value = args.shift();
-                if (param.defaultValue != null) {
-                  let transform = transforms[param.defaultValue](message, value);
-                  if (transform == null) return message.reply(
-                    `${ comm }: '${ value }' is not a valid ${ param.defaultValue }.`);
-                  value = transform;
+                  if (value == null)
+                    value = (param.optionalIsArray ? null : undefined);
+                  else if (param.defaultValue != null) {
+                    let transform = transforms[param.defaultValue](message, value);
+                    if (transform == null) return message.reply(
+                      `${ comm.name }: '${ value }' is not a valid ${ param.defaultValue }.`);
+                    value = ((transform != null) ? transform : null);
+                  }
+                  origArgs.push(value);
                 }
-                origArgs.push(value);
                 break;
             }
           
-          let result = action(...origArgs);
+          let result = comm.action(...origArgs);
           if (result == null) return;
-          
-          if (result instanceof Array)
-            message.target.send(...result);
-          else message.reply(result);
+          if (!(result instanceof Array)) result = [ result ];
+          message.reply(...result);
         };
         
-        if (comm instanceof RegExp)
-          this.regexes.push([ comm, commAction ]);
-        else this.commands[comm.toLowerCase()] = commAction;
+        if (comm.regex) this.regexes.push([ trigger, comm.use ]);
+        else this.commands[trigger.toLowerCase()] = comm.use;
+        
+        if (comm.name != null)
+          this.lookup[comm.name] = comm;
       }
+    }
+    
+    // Now process all alias comms.
+    for (let comm of aliases) {
+      let orig = this.lookup[comm.alias];
+      if (orig == null) throw new Error(
+        `Aliased comm '${ comm.alias }' not found for comm '${ comm.trigger }'`);
+      if (orig.regex) throw new Error(
+        `Aliased comm '${ comm.alias }' for comm '${ comm.trigger }' is a regex comm`);
+      comm = extend({ }, orig, {
+        trigger: comm.trigger, name: comm.name, alias: comm.alias,
+        usage: orig.usage.splice(this.config.prefix.length, orig.trigger.length, comm.trigger),
+      });
+      this.commands[comm.trigger] = comm.use;
+      this.lookup[comm.trigger] = comm;
     }
   }
   
@@ -236,6 +300,35 @@ module.exports = class React extends Plug {
       }
       
     });
+  }
+  
+};
+
+React.builtin = {
+  
+  help: {
+    help: "Shows this help or help for the specified comm.",
+    action: (cord, comm=null) => {
+      if (comm != null) {
+        comm = (cord.plugs.React.lookup[comm] || {  });
+        let result = (comm.regex ? `${ comm.name }: ` : "");
+        if (comm.usage != null) result += `'${ comm.usage }' - `
+        result += (comm.help || "No help available.");
+        if (comm.alias) result += ` (alias for '${ comm.alias }')`;
+        return result;
+      } else {
+        let prefix = cord.config.React.prefix;
+        return `Use '${ prefix }comms' to show all comms and ` +
+               `'${ prefix }help <comm>' to display help for a specific comm.`;
+      }
+    }
+  },
+  
+  comms: {
+    help: "Shows all available comms.",
+    action: (cord) =>
+      `Available comms: ${ values(cord.plugs.React.lookup).filter((comm) => !comm.alias)
+        .map((comm) => `${ !comm.regex ? cord.config.React.prefix : "" }${ comm.name }`).join(", ") }`
   }
   
 };

@@ -74,6 +74,7 @@ exports.UnexpectedTypeError = class UnexpectedTypeError extends Error {
       if (i < expected.length - 2) str += ", ";
       else if (i == expected.length - 2) str += " or ";
     }
+    str += `, got ${ type(value) }`;
     super(str);
   }
 };

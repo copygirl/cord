@@ -8,8 +8,9 @@ let { extend, Iterable: { entries, values, },
 
 
 let defaults = {
-  prefix: "~",
-  comms: { }
+  prefix: "~",          // Prefix used for regular commands, such as "~help".
+  comms: { },           // Additional configuration for commands.
+  replyOnUnknown: true, // Whether to reply when an unknown command is used. 
 };
 
 let commDefaults = {
@@ -207,7 +208,11 @@ module.exports = class React extends Plug {
       if (content.startsWith(this.config.prefix)) {
         let command = content.slice(this.config.prefix.length).split(" ", 2)[0];
         let comm = this.commands[command.toLowerCase()];
-        if (comm == null) return message.reply(`Unknown command '${ command }'.`);
+        if (comm == null) {
+          if (this.config.replyOnUnknown)
+            message.reply(`Unknown command '${ command }'.`);
+          return;
+        }
         
         content  = content.slice(this.config.prefix.length + command.length + 1);
         let args = getCommArgs(content);

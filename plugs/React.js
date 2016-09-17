@@ -233,8 +233,10 @@ let React = module.exports = class React extends Plug {
           
           let result = comm.action(...origArgs);
           if (result == null) return;
-          if (!(result instanceof Array)) result = [ result ];
-          message.reply(...result);
+          
+          if (result instanceof Array)
+            message.target.send(...result);
+          else message.reply(result);
         };
         
         if (comm.regex) this.regexes.push([ trigger, comm.use ]);

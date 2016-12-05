@@ -36,44 +36,41 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
       
       // Create user and channel objects.
       for (let [id, user] of this._discord.users)
-        this._getUser(id, true);
+        this._getUser(user);
       for (let [id, channel] of this._discord.channels)
-        this._getChannel(id, true);
+        this._getChannel(channel);
     });
     
     // User events.
-    this._discord.on("guildMemberAdd", (guild, user) =>
-      this._getUser(user, true));
-    this._discord.on("guildMemberRemove", (guild, user) => {
-      if (this._discord.users.exists("id", user.id)) return;
-      user = this._getUser(user);
-      this._users.delete(user._id);
+    this._discord.on("guildMemberAdd", (guild, member) =>
+      this._getUser(member.user));
+    this._discord.on("guildMemberRemove", (guild, member) => {
+      let user = this._getUser(member.id);
+      this._users.delete(member.id);
       user.emit("removed");
     });
-    this._discord.on("presenceUpdate", (oldMember, newMember) => {
-      let user = this._getUser(newMember);
-      if (oldMember.name != newMember.name) {
-        let resolves = user.resolveStrings;
-        user._name = newMember.name;
-        user.emit("renamed", oldMember.name, newMember.name, resolves);
-      }
+    this._discord.on("userUpdate", (oldUser, newUser) => {
+      let user = this._getUser(newUser.id);
+      if (user == null) return;
+      user._discordUser = newUser;
+      if (oldUser.name != newUser.name)
+        user.emit("renamed", oldUser.name, newUser.name, user.resolveStrings);
     });
     
     // Channel events.
-    this._discord.on("channelCreate", (channel) =>
-      this._getChannel(channel, true));
-    this._discord.on("channelDeletd", (channel) => {
-      channel = this._getChannel(channel);
-      this._channels.delete(channel._id);
+    this._discord.on("channelCreate", (discordChannel) =>
+      this._getChannel(discordChannel));
+    this._discord.on("channelDelete", (discordChannel) => {
+      let channel = this._getChannel(discordChannel.id);
+      this._channels.delete(discordChannel.id);
       channel.emit("removed");
     });
     this._discord.on("channelUpdate", (oldChannel, newChannel) => {
-      let channel = this._getChannel(newChannel);
-      if ((channel != null) && (oldChannel.name != newChannel.name)) {
-        let resolves = channel.resolveStrings;
-        channel._name = newChannel.name;
-        channel.emit("renamed", oldChannel.name, newChannel.name, resolves);
-      }
+      let channel = this._getChannel(newChannel.id);
+      if (channel == null) return;
+      channel._discordChannel = newChannel;
+      if (oldChannel.name != newChannel.name)
+        channel.emit("renamed", oldChannel.name, newChannel.name, channel.resolveStrings);
     });
     
     // TODO: Handle joining / leaving guilds.
@@ -96,28 +93,36 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   }
   
   
-  _getUser(id, create = false) {
-    if (typeof id != "string") id = id.id;
-    let user = this._users.get(id);
-    if ((user == null) && create) {
-      user = new DiscordSocket.User(this, id);
-      this._users.set(id, user);
-      this.emit("newUser", user);
+  _getUser(id) {
+    let discordUser = null;
+    if (typeof id != "string") {
+      discordUser = id;
+      id = discordUser.id;
     }
+    let user = this._users.get(id);
+    if ((user != null) || (discordUser == null)) return user;
+    
+    user = new DiscordSocket.User(this, discordUser);
+    this._users.set(id, user);
+    this.emit("newUser", user);
     return user;
   }
   
-  _getChannel(id, create = false) {
-    if (typeof id != "string") id = id.id;
-    let channel = this._channels.get(id);
-    if ((channel == null) && create) {
-      channel = new DiscordSocket.Channel(this, id);
-      // Currently doesn't support non-text channels.
-      // So, no DM or group DM channels :(
-      if (channel._discordChannel.type != "text") return null;
-      this._channels.set(id, channel);
-      this.emit("newChannel", channel);
+  _getChannel(id) {
+    let discordChannel = null;
+    if (typeof id != "string") {
+      discordChannel = id;
+      id = discordChannel.id;
     }
+    let channel = this._channels.get(id);
+    if ((channel != null) || (discordChannel == null) ||
+        (discordChannel.type != "text")) return channel;
+    // Currently doesn't support non-text channels.
+    // So no DM or group DM channels, either :(
+    
+    channel = new DiscordSocket.Channel(this, discordChannel);
+    this._channels.set(id, channel);
+    this.emit("newChannel", channel);
     return channel;
   }
   
@@ -152,7 +157,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
         if (thing instanceof DiscordSocket.User) {
           let nickname = discordMsg.guild.members.find("id", id).nickname;
           if (nickname != null)
-            thing = Object.create(thing, { _name: { value: nickname } });
+            thing = Object.create(thing, { name: { value: nickname } });
         }
         
         return ((thing != null) ? thing.mention : null);
@@ -214,35 +219,33 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
 
 DiscordSocket.User = class DiscordUser extends Socket.User {
   
-  constructor(socket, id) {
+  constructor(socket, discordUser) {
     super(socket);
-    this._id = id;
-    this._name = this._discordUser.username;
+    this._discordUser = discordUser;
   }
   
-  get _discordUser() { return this.socket._discord.users.find("id", this._id); }
+  get _id() { return this._discordUser.id; }
   get _discordMention() { return `<@${ this._id }>`; }
   
-  get name() { return this._name; }
-  get mentionStr() { return `@${ this._name }`; }
+  get name() { return this._discordUser.username; }
+  get mentionStr() { return `@${ this.name }`; }
   get resolveStrings() { return [ `@${ this._id }` ]; }
   
 };
 
 DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
   
-  constructor(socket, id) {
+  constructor(socket, discordChannel) {
     super(socket);
-    this._id   = id;
-    this._name = this._discordChannel.name;
+    this._discordChannel = discordChannel;
   }
   
-  get _discordChannel() { return this.socket._discord.channels.find("id", this._id); }
+  get _id() { return this._discordChannel.id; }
   get _discordMention() { return `<#${ this._id }>`; }
   
-  get name() { return `#${ this._name }`; }
-  get resolveStrings() { return [ `#${ this._id }`, `#${ this._name }`,
-                                  `${ this._discordChannel.guild.id }/#${ this._name }` ]; }
+  get name() { return `#${ this._discordChannel.name }`; }
+  get resolveStrings() { return [ `#${ this._id }`, `${ this.name }`,
+                                  `${ this._discordChannel.guild.id }/${ this.name }` ]; }
   get topic() { return (this._discordChannel.topic || null); }
   
   send(...parts) { this._send(parts, false); }

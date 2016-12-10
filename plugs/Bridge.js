@@ -81,7 +81,8 @@ let Bridge = module.exports = class Bridge extends Plug {
       let bridge = this.channels.get(message.target);
       if ((bridge == null) || !bridge.enabled) return;
       
-      let userResolves = new Set(message.sender.resolveStrings);
+      let userResolves = new Set(Iterable.map(message.sender.resolveStrings,
+            (resolve) => `${ message.sender.socket.id }:${ resolve }`));
       
       if (Iterable.concat(this.config.ignore, bridge.config.ignore)
             .any((e) => userResolves.has(e))) return;

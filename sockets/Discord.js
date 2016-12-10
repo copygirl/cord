@@ -207,9 +207,8 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   }
   
   type(resolveStr) {
-    // TODO: Allow resolving @username for mentions.
-    let result = /^(?:(?:(\d{17,18})\/)?#([^\d].+)|#(\d{17,18})|@!?(\d{17,18}))$/.exec(resolveStr);
-    return ((result != null) ? ((result[4] != null) ? "user" : "channel")
+    let result = /^(?:(?:(\d{17,18})\/)?|#([^\d].+|\d{17,18})|@!?([^\d].+|\d{17,18}))$/.exec(resolveStr);
+    return ((result != null) ? ((result[3] != null) ? "user" : "channel")
                              : null);
   }
   
@@ -229,7 +228,8 @@ DiscordSocket.User = class DiscordUser extends Socket.User {
   
   get name() { return this._discordUser.username; }
   get mentionStr() { return `@${ this.name }`; }
-  get resolveStrings() { return [ `@${ this._id }` ]; }
+  get resolveStrings() { return [ `@${ this._id }`, `@${ this.name }`,
+                                  `@${ this.name }#${ this._discordUser.discriminator }` ]; }
   
 };
 

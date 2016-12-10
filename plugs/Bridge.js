@@ -81,10 +81,12 @@ let Bridge = module.exports = class Bridge extends Plug {
       let bridge = this.channels.get(message.target);
       if ((bridge == null) || !bridge.enabled) return;
       
-      let userResolves = new Set(message.sender.resolveStrings);
-      
-      if (Iterable.concat(this.config.ignore, bridge.config.ignore)
-            .any((e) => userResolves.has(e))) return;
+      // Resolves to the Discord user ID with @ prepending or the IRC nickname.
+      let userResolves = (message.sender.socket.id).concat(":", (message.sender.resolveStrings).toString());
+
+      // Checks ignore list in config for a matching ID or nickname. Case sensitive. TODO: make it not case sensitive.
+      let ignoreList = (this.config.ignore).concat(bridge.config.ignore);
+      if (ignoreList.indexOf(userResolves) >= 0) return;
       
       let parts = message.parts;
       if (!message.sender.isSelf) {

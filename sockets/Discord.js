@@ -143,7 +143,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     
     // Let's just use a dirty hack to get it to use the nickname instead of the username.
     if (discordMsg.member.nickname != null)
-      sender = Object.create(sender, { _name: { value: discordMsg.member.nickname } });
+      sender = Object.create(sender, { name: { value: discordMsg.member.nickname } });
     
     let message = new Socket.Message(this, time, target, sender, parts)
       // Turn action-like messages into Socket.Action messages.
@@ -155,7 +155,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
         
         // Same as above: Dirty hacky nickname powers activate!
         if (thing instanceof DiscordSocket.User) {
-          let nickname = discordMsg.guild.members.find("id", id).nickname;
+          let nickname = discordMsg.guild.members.get(id).nickname;
           if (nickname != null)
             thing = Object.create(thing, { name: { value: nickname } });
         }
@@ -265,7 +265,7 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
       [ /([@#]).+/g, (part, type) => {
         switch (type) {
           case '@':
-            for (let [id, member] of this._discordChannel.guild.members) {
+            for (let [id, member] of this._discordChannel.guild.members.entries()) {
               let match = `@${ member.nickname || member.user.username }`;
               if (part.slice(0, match.length) != match) continue;
               let mention = new Socket.Mention(this.socket._getUser(id), message);

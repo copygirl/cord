@@ -319,7 +319,7 @@ React.builtin = {
         if (comm.alias) result += ` (alias for '${ comm.alias }')`;
         return result;
       } else {
-        let prefix = cord.config.React.prefix;
+        let prefix = cord.plugs.React.config.prefix;
         return `Use '${ prefix }comms' to show all comms and ` +
                `'${ prefix }help <comm>' to display help for a specific comm.`;
       }
@@ -330,7 +330,7 @@ React.builtin = {
     help: "Shows all available comms.",
     action: (cord) =>
       `Available comms: ${ values(cord.plugs.React.lookup).filter((comm) => !comm.alias)
-        .map((comm) => `${ !comm.regex ? cord.config.React.prefix : "" }${ comm.name }`).join(", ") }`
+        .map((comm) => `${ !comm.regex ? cord.plugs.React.config.prefix : "" }${ comm.name }`).join(", ") }`
   }
   
 };

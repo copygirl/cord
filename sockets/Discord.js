@@ -20,26 +20,14 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   constructor(cord, id, auth) {
     super(cord, id, auth);
     auth = extend({ }, defaults, auth);
-    if ((auth.token == null) && ((auth.email == null) || (auth.password == null)))
-      throw new Error(`${ id }: token or email and password required`);
+    if (auth.token == null)
+      throw new Error(`${ id }: token required`);
     
-    this.token    = auth.token;
-    this.email    = auth.email;
-    this.password = auth.password;
+    this.token = auth.token;
     
     this._discord  = new Client();
     this._users    = new Map();
     this._channels = new Map();
-    
-    this._discord.on("ready", () => {
-      this.emit("connected", this._getUser(this._discord.user, true));
-      
-      // Create user and channel objects.
-      for (let [id, user] of this._discord.users)
-        this._getUser(user);
-      for (let [id, channel] of this._discord.channels)
-        this._getChannel(channel);
-    });
     
     // User events.
     this._discord.on("guildMemberAdd", (guild, member) =>
@@ -77,7 +65,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     
     this._discord.on("message", (msg) => this._message(msg));
     
-    this._discord.on("disconnected", () => {
+    this._discord.on("disconnect", (event) => {
       for (let user of this._users.values()) user.emit("removed");
       for (let channel of this._channels.values()) channel.emit("removed");
       this._users.clear();
@@ -85,10 +73,10 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
       
       // Clean up Discord.js' internal state.
       // This is needed to reconnect properly.
-      this._discord.internal.setup();
+      //this._discord.internal.setup();
       
-      this.emit("disconnected", ((this.isConnected)
-        ? "Disconnected" : "Unable to connect / login"));
+      let message = ((this.isConnected) ? "Disconnected" : "Unable to connect / login");
+      this.emit("disconnected", `${ message } (${ event.code }: ${ event.reason })`);
     });
   }
   
@@ -197,13 +185,19 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   
   
   connect() {
-    return ((this.token != null)
-      ? this._discord.login(this.token)
-      : this._discord.login(this.email, this.password));
+    return this._discord.login(this.token).then(() => {
+      this.emit("connected", this._getUser(this._discord.user, true));
+      
+      // Create user and channel objects.
+      for (let [id, user] of this._discord.users)
+        this._getUser(user);
+      for (let [id, channel] of this._discord.channels)
+        this._getChannel(channel);
+    });
   }
   
   disconnect(reason) {
-    return this._discord.logout();
+    throw new Error(`${ id }: Not supported`);
   }
   
   type(resolveStr) {
@@ -296,7 +290,7 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
     ).join("");
     if (isAction) content = `_${ content }_`;
     
-    let promise = this._discordChannel.sendMessage(content);
+    let promise = this._discordChannel.send(content);
     if (!silent) promise.then((message) => this.socket._message(message, true));
     // TODO: Do something about failed messages?
   }

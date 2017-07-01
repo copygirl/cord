@@ -30,9 +30,9 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     this._channels = new Map();
     
     // User events.
-    this._discord.on("guildMemberAdd", (guild, member) =>
+    this._discord.on("guildMemberAdd", (member) =>
       this._getUser(member.user));
-    this._discord.on("guildMemberRemove", (guild, member) => {
+    this._discord.on("guildMemberRemove", (member) => {
       let user = this._getUser(member.id);
       this._users.delete(member.id);
       user.emit("removed");

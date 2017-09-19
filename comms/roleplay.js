@@ -21,6 +21,7 @@ module.exports = {
     help: "Roll some dice, for example '1d20+5' or '6d20>10'!",
     usage: "<dice>d<sides>[>/<limit][+/-offset] <...>",
     action: (...matches) => {
+      process.exit(1);
       if (matches.length > MAX_DICE_ROLLS_PER_MESSAGE) return;
       
       // Prepare and validate some stuff.

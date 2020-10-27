@@ -25,7 +25,10 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     
     this.token = auth.token;
     
-    this._discord  = new Client();
+    this._discord = new Client({
+      fetchAllMembers: true,
+      ws: { intents: [ "GUILDS", "GUILD_MEMBERS", "GUILD_MESSAGES" ] }
+    });
     this._users    = new Map();
     this._channels = new Map();
     
@@ -184,16 +187,18 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   get channels() { return this._channels.values(); }
   
   
-  connect() {
-    return this._discord.login(this.token).then(() => {
-      this.emit("connected", this._getUser(this._discord.user, true));
-      
-      // Create user and channel objects.
-      for (let [id, user] of this._discord.users.cache)
-        this._getUser(user);
-      for (let [id, channel] of this._discord.channels.cache)
+  async connect() {
+    await this._discord.login(this.token);
+    this.emit("connected", this._getUser(this._discord.user, true));
+    
+    // Fetch channel and member objects of all connected guilds.
+    for (let [name, guild] of this._discord.guilds.cache) {
+      await guild.fetch();
+      for (let [id, channel] of guild.channels.cache)
         this._getChannel(channel);
-    });
+      for (let [id, member] of await guild.members.fetch())
+        this._getUser(member.user);
+    }
   }
   
   disconnect(reason) {
@@ -262,7 +267,7 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
             for (let [id, member] of this._discordChannel.guild.members.cache) {
               let match = `@${ member.nickname || member.user.username }`;
               if (part.slice(0, match.length) != match) continue;
-              let mention = new Socket.Mention(this.socket._getUser(id), message);
+              let mention = new Socket.Mention(this.socket._getUser(id));
               return [ mention, part.slice(match.length) ];
             }
             break;
@@ -270,7 +275,7 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
             for (let channel of this.socket.channels) {
               let match = channel.name;
               if (part.slice(0, match.length) != match) continue;
-              let mention = new Socket.Mention(channel, message);
+              let mention = new Socket.Mention(channel);
               return [ mention, part.slice(match.length) ];
             }
             break;

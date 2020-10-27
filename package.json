@@ -3,10 +3,10 @@
   "description": "IRC and Discord Chatbot Framework",
   "author": "copygirl <halfnerd.copygirl@gmail.com>",
   "repository": "copygirl/cord",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "dependencies": {
-    "discord.js": "^11.1.0",
-    "irc": "^0.5.0"
+    "discord.js": "^12.4.1",
+    "irc": "^0.5.2"
   },
   "scripts": {
     "start": "node cord.js"

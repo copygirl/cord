@@ -65,7 +65,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     
     this._discord.on("message", (msg) => this._message(msg));
     
-    this._discord.on("disconnect", (event) => {
+    this._discord.on("shardDisconnect", (event, shardID) => {
       for (let user of this._users.values()) user.emit("removed");
       for (let channel of this._channels.values()) channel.emit("removed");
       this._users.clear();
@@ -143,7 +143,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
         
         // Same as above: Dirty hacky nickname powers activate!
         if (thing instanceof DiscordSocket.User) {
-          let nickname = discordMsg.guild.members.get(id).nickname;
+          let nickname = discordMsg.guild.members.cache.get(id).nickname;
           if (nickname != null)
             thing = Object.create(thing, { name: { value: nickname } });
         }
@@ -189,9 +189,9 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
       this.emit("connected", this._getUser(this._discord.user, true));
       
       // Create user and channel objects.
-      for (let [id, user] of this._discord.users)
+      for (let [id, user] of this._discord.users.cache)
         this._getUser(user);
-      for (let [id, channel] of this._discord.channels)
+      for (let [id, channel] of this._discord.channels.cache)
         this._getChannel(channel);
     });
   }
@@ -259,7 +259,7 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
       [ /([@#]).+/g, (part, type) => {
         switch (type) {
           case '@':
-            for (let [id, member] of this._discordChannel.guild.members.entries()) {
+            for (let [id, member] of this._discordChannel.guild.members.cache) {
               let match = `@${ member.nickname || member.user.username }`;
               if (part.slice(0, match.length) != match) continue;
               let mention = new Socket.Mention(this.socket._getUser(id), message);

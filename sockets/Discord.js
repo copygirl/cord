@@ -1,7 +1,7 @@
 "use strict";
 
-let { Client } = require("discord.js");
-let Socket     = require("./Socket");
+let { Client, ChannelType, GatewayIntentBits } = require("discord.js");
+let Socket = require("./Socket");
 
 let { extend } = require("../utility");
 
@@ -26,8 +26,12 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     this.token = auth.token;
     
     this._discord = new Client({
-      fetchAllMembers: true,
-      ws: { intents: [ "GUILDS", "GUILD_MEMBERS", "GUILD_MESSAGES" ] }
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+      ]
     });
     this._users    = new Map();
     this._channels = new Map();
@@ -66,9 +70,9 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     
     // TODO: Handle joining / leaving guilds.
     
-    this._discord.on("message", (msg) => this._message(msg));
+    this._discord.on("messageCreate", (msg) => this._message(msg));
     
-    this._discord.on("shardDisconnect", (event, shardID) => {
+    this._discord.on("shardDisconnect", (event, _shardId) => {
       for (let user of this._users.values()) user.emit("removed");
       for (let channel of this._channels.values()) channel.emit("removed");
       this._users.clear();
@@ -90,8 +94,10 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
       discordUser = id;
       id = discordUser.id;
     }
+
     let user = this._users.get(id);
-    if ((user != null) || (discordUser == null)) return user;
+    if (user != null) return user; // Already cached.
+    if (discordUser == null) return null;
     
     user = new DiscordSocket.User(this, discordUser);
     this._users.set(id, user);
@@ -105,11 +111,13 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
       discordChannel = id;
       id = discordChannel.id;
     }
+
     let channel = this._channels.get(id);
-    if ((channel != null) || (discordChannel == null) ||
-        (discordChannel.type != "text")) return channel;
+    if (channel != null) return channel; // Already cached.
+
     // Currently doesn't support non-text channels.
     // So no DM or group DM channels, either :(
+    if (discordChannel?.type != ChannelType.GuildText) return null;
     
     channel = new DiscordSocket.Channel(this, discordChannel);
     this._channels.set(id, channel);
@@ -122,21 +130,20 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     
     // Skip incoming messages that were send by the bot's account.
     if (!sent && (discordMsg.author == this._discord.user)) return;
-    
-    let time   = new Date(discordMsg.timestamp);
-    let sender = this._getUser(discordMsg.author, true);
+
     let target = this._getChannel(discordMsg.channel, true);
-    let parts  = [ discordMsg.content ];
-    
     // If no channel could be created, which for example happens
     // for PM channels, get out now before it's too late!
     if (target == null) return;
+    
+    let sender = this._getUser(discordMsg.author, true);
+    let parts  = [ discordMsg.content ];
     
     // Let's just use a dirty hack to get it to use the nickname instead of the username.
     if (discordMsg.member.nickname != null)
       sender = Object.create(sender, { name: { value: discordMsg.member.nickname } });
     
-    let message = new Socket.Message(this, time, target, sender, parts)
+    let message = new Socket.Message(this, discordMsg.createdAt, target, sender, parts)
       // Turn action-like messages into Socket.Action messages.
       .augment(/^_([^_]*)_$/, (_, text) => [ Socket.Action, text ])
       // Turn discord mentions into their Socket equivalents.

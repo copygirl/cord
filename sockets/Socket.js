@@ -2,8 +2,7 @@
 
 let { EventEmitter } = require("events");
 
-let { isClass, implement, type,
-      Iterable, UnexpectedTypeError } = require("../utility");
+let { isClass, implement, Iterable } = require("../utility");
 
 
 /** The Socket class defines a common interface for connections.

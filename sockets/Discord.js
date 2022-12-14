@@ -213,7 +213,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
   }
   
   type(resolveStr) {
-    let result = /^(?:(?:(\d{17,18})\/)?|#([^\d].+|\d{17,18})|@!?([^\d].+|\d{17,18}))$/.exec(resolveStr);
+    let result = /^(?:(?:(\d{17,21})\/)?|#([^\d].+|\d{17,21})|@!?([^\d].+|\d{17,21}))$/.exec(resolveStr);
     return ((result != null) ? ((result[3] != null) ? "user" : "channel")
                              : null);
   }

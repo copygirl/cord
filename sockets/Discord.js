@@ -1,6 +1,6 @@
 "use strict";
 
-let { Client } = require("discord.js");
+const { Client, GatewayIntentBits, Events, ChannelType} = require('discord.js'); 
 let Socket     = require("./Socket");
 
 let { extend } = require("../utility");
@@ -27,20 +27,20 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     
     this._discord = new Client({
       fetchAllMembers: true,
-      ws: { intents: [ "GUILDS", "GUILD_MEMBERS", "GUILD_MESSAGES" ] }
+      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent ]
     });
     this._users    = new Map();
     this._channels = new Map();
     
     // User events.
-    this._discord.on("guildMemberAdd", (member) =>
+    this._discord.on(Events.GuildMemberAdd, (member) =>
       this._getUser(member.user));
-    this._discord.on("guildMemberRemove", (member) => {
+    this._discord.on(Events.GuildMemberRemove, (member) => {
       let user = this._getUser(member.id);
       this._users.delete(member.id);
       user.emit("removed");
     });
-    this._discord.on("userUpdate", (oldUser, newUser) => {
+    this._discord.on(Events.UserUpdate, (oldUser, newUser) => {
       let user = this._getUser(newUser.id);
       if (user == null) return;
       user._discordUser = newUser;
@@ -49,14 +49,14 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     });
     
     // Channel events.
-    this._discord.on("channelCreate", (discordChannel) =>
+    this._discord.on(Events.ChannelCreate, (discordChannel) =>
       this._getChannel(discordChannel));
-    this._discord.on("channelDelete", (discordChannel) => {
+    this._discord.on(Events.ChannelDelete, (discordChannel) => {
       let channel = this._getChannel(discordChannel.id);
       this._channels.delete(discordChannel.id);
       channel.emit("removed");
     });
-    this._discord.on("channelUpdate", (oldChannel, newChannel) => {
+    this._discord.on(Events.ChannelUpdate, (oldChannel, newChannel) => {
       let channel = this._getChannel(newChannel.id);
       if (channel == null) return;
       channel._discordChannel = newChannel;
@@ -66,9 +66,9 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     
     // TODO: Handle joining / leaving guilds.
     
-    this._discord.on("message", (msg) => this._message(msg));
+    this._discord.on(Events.MessageCreate, (msg) => this._message(msg));
     
-    this._discord.on("shardDisconnect", (event, shardID) => {
+    this._discord.on(Events.shardDisconnect, (event, shardID) => {
       for (let user of this._users.values()) user.emit("removed");
       for (let channel of this._channels.values()) channel.emit("removed");
       this._users.clear();
@@ -107,7 +107,7 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     }
     let channel = this._channels.get(id);
     if ((channel != null) || (discordChannel == null) ||
-        (discordChannel.type != "text")) return channel;
+        (discordChannel.type != ChannelType.GuildText)) return channel;
     // Currently doesn't support non-text channels.
     // So no DM or group DM channels, either :(
     

@@ -134,6 +134,9 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     // for PM channels, get out now before it's too late!
     if (target == null) return;
     
+    // A hack to get global Nicknames instead of the handle
+    if (discordMsg.author.globalName != null)
+      sender = Object.create(sender, { name: { value: discordMsg.author.globalName } });
     // Let's just use a dirty hack to get it to use the nickname instead of the username.
     if (discordMsg.member.nickname != null)
       sender = Object.create(sender, { name: { value: discordMsg.member.nickname } });

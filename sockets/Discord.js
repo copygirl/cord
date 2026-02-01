@@ -136,12 +136,8 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     // for PM channels, get out now before it's too late!
     if (target == null) return;
     
-    let sender = this._getUser(discordMsg.author, true);
+    let sender = _overrideName(this._getUser(discordMsg.author, true), discordMsg.member);
     let parts  = [ discordMsg.content ];
-    
-    // Let's just use a dirty hack to get it to use the nickname instead of the username.
-    if (discordMsg.member.nickname != null)
-      sender = Object.create(sender, { name: { value: discordMsg.member.nickname } });
     
     let message = new Socket.Message(this, discordMsg.createdAt, target, sender, parts)
       // Turn action-like messages into Socket.Action messages.
@@ -150,14 +146,8 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
       .augment(/<(#|@!?)(\d{17,18})>/, (_, type, id) => {
         let lookup = ((type == '#') ? "_getChannel" : "_getUser");
         let thing = this[lookup](id);
-        
-        // Same as above: Dirty hacky nickname powers activate!
-        if (thing instanceof DiscordSocket.User) {
-          let nickname = discordMsg.guild.members.cache.get(id).nickname;
-          if (nickname != null)
-            thing = Object.create(thing, { name: { value: nickname } });
-        }
-        
+        if (thing instanceof DiscordSocket.User)
+          thing = _overrideName(thing, discordMsg.guild.members.cache.get(id));
         return ((thing != null) ? thing.mention : null);
       })
       // Turn newlines into the Socket equivalent.
@@ -234,8 +224,7 @@ DiscordSocket.User = class DiscordUser extends Socket.User {
   
   get name() { return this._discordUser.username; }
   get mentionStr() { return `@${ this.name }`; }
-  get resolveStrings() { return [ `@${ this._id }`, `@${ this.name }`,
-                                  `@${ this.name }#${ this._discordUser.discriminator }` ]; }
+  get resolveStrings() { return [ `@${ this._id }`, `@${ this.name }`, `@${ this.tag }` ]; }
   
 };
 
@@ -272,7 +261,7 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
         switch (type) {
           case '@':
             for (let [id, member] of this._discordChannel.guild.members.cache) {
-              let match = `@${ member.nickname || member.user.username }`;
+              let match = `@${ _sanitizeMemberDisplayName(member) }`;
               if (part.slice(0, match.length) != match) continue;
               let mention = new Socket.Mention(this.socket._getUser(id));
               return [ mention, part.slice(match.length) ];
@@ -308,3 +297,15 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
   }
   
 };
+
+// Use a bit of a dirty hack to change the apparent name of a user (unique across
+// all of Discord) to the member's display name (unique per Discord community).
+// This also replaces spaces with underscores for better IRC support.
+function _overrideName(user, member) {
+  let displayName = _sanitizeMemberDisplayName(member);
+  return Object.create(user, { name: { value: displayName } });
+}
+
+function _sanitizeMemberDisplayName(member) {
+  return member.displayName.replaceAll(/\s+/g, "_");
+}

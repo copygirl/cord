@@ -261,22 +261,27 @@ DiscordSocket.Channel = class DiscordChannel extends Socket.Channel {
     let isAction = false;
     let content = message.augmentClone(
       // Replace @user and #channel mentions with their Discord equivalent.
-      [ /([@#]).+/g, (part, type) => {
+      // ("(?<!\w)" makes sure the symbol is not preceeded by a word character.)
+      [ /(?<!\w)([@#]).+/g, (match, type) => {
         switch (type) {
           case '@':
             for (let [id, member] of this._discordChannel.guild.members.cache) {
-              let match = `@${ _sanitizeMemberDisplayName(member) }`;
-              if (part.slice(0, match.length) != match) continue;
+              let name = _sanitizeMemberDisplayName(member);
+              // Ensure the matched string starts with this user's display name.
+              if (!match.startsWith(name, 1)) continue;
+              // Ensure the display name isn't followed by a word character.
+              if (match.slice(name.length + 1).match(/^[\w]/)) continue;
               let mention = new Socket.Mention(this.socket._getUser(id));
-              return [ mention, part.slice(match.length) ];
+              return [ mention, match.slice(name.length + 1) ];
             }
             break;
           case '#':
             for (let channel of this.socket.channels) {
-              let match = channel.name;
-              if (part.slice(0, match.length) != match) continue;
+              let name = channel.name;
+              if (!match.startsWith(name)) continue;
+              if (match.slice(name.length).match(/^[\w]/)) continue;
               let mention = new Socket.Mention(channel);
-              return [ mention, part.slice(match.length) ];
+              return [ mention, match.slice(name.length) ];
             }
             break;
         }

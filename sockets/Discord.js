@@ -127,6 +127,8 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     let sender = this._getUser(discordMsg.author, true);
     let target = this._getChannel(discordMsg.channel, true);
     let parts  = [ discordMsg.content ];
+
+    
     
     // If no channel could be created, which for example happens
     // for PM channels, get out now before it's too late!
@@ -158,6 +160,10 @@ let DiscordSocket = module.exports = class DiscordSocket extends Socket {
     
     for (let [id, attachment] of discordMsg.attachments)
       message.parts.push(" ", new Socket.Attachment(attachment.filename, attachment.url));
+
+    // Treating stickers like attachements
+    for (let [id, sticker] of discordMsg.stickers)
+      message.parts.push(" ", new Socket.Attachment(sticker.name, sticker.url))
     
     // TODO: Parse markdown formatting of messages.
     

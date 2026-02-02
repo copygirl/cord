@@ -1,4 +1,4 @@
-# cord
+# cord [moved to git.gay](https://git.gay/copygirl/cord)
 
 **cord** is chat bot framework, currently supporting IRC and Discord, as well
 as the name of our personal bot residing the *#obsidian Research* IRC channel
